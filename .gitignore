@@ -1,0 +1,22 @@
+# Credenciales
+.env
+.env.local
+secrets.h
+config.local.*
+
+# Arduino
+firmware/**/build/
+*.bin
+*.elf
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+
+# Node (si más adelante se agrega build)
+node_modules/
+dist/
