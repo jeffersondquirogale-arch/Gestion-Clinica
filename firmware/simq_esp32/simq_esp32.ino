@@ -29,7 +29,7 @@ const char* WIFI_SSID     = "IPHONE";
 const char* WIFI_PASS     = "Tarayjack1226";
 
 const char* SUPABASE_URL  = "https://vpdtereegwgifeeomtsx.supabase.co";
-const char* SUPABASE_KEY  = "PEGA_AQUI_LA_CLAVE_COMPLETA";
+const char* SUPABASE_KEY  = "sb_publishable_mWh5yJUPuomCYHLY2Q-ezw_wHVadiIh";
 const char* DEVICE_ID     = "esp32-quirofano-01";
 
 /* Pines */
