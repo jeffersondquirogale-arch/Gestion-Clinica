@@ -25,11 +25,11 @@
 
 /* ==================== CONFIGURACIÓN ==================== */
 
-const char* WIFI_SSID     = "TU_RED";
-const char* WIFI_PASS     = "TU_CLAVE";
+const char* WIFI_SSID     = "IPHONE";
+const char* WIFI_PASS     = "Tarayjack1226";
 
-const char* SUPABASE_URL  = "https://xxxxxxxx.supabase.co";
-const char* SUPABASE_KEY  = "TU_ANON_KEY";
+const char* SUPABASE_URL  = "https://vpdtereegwgifeeomtsx.supabase.co";
+const char* SUPABASE_KEY  = "PEGA_AQUI_LA_CLAVE_COMPLETA";
 const char* DEVICE_ID     = "esp32-quirofano-01";
 
 /* Pines */
@@ -128,7 +128,6 @@ bool publicar(float temp, float hum, float ilum, float ruido) {
   http.begin(endpoint);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("apikey", SUPABASE_KEY);
-  http.addHeader("Authorization", String("Bearer ") + SUPABASE_KEY);
   http.addHeader("Prefer", "return=minimal");
 
   int codigo = http.POST(cuerpo);
