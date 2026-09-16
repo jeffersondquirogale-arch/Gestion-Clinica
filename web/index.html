@@ -6,375 +6,459 @@
 <title>SIMQ — Monitor de sala de cirugía</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0E1A1C;
-  --panel:#142528;
-  --panel-2:#1B3033;
-  --line:#254246;
-  --ink:#E6F2F1;
-  --ink-dim:#8FAEB0;
-  --ink-faint:#5C7E81;
-  --ch-temp:#7DF9A8;
-  --ch-hum:#4CC9F0;
-  --ch-lux:#F9D949;
-  --ch-noise:#F2789F;
-  --alarm:#FF4D4D;
-  --ok:#7DF9A8;
-  --radius:4px;
-  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --canvas:#F3F6F7;
+  --card:#FFFFFF;
+  --line:#E5EBEC;
+  --line-soft:#EFF3F4;
+  --ink:#16292C;
+  --ink-2:#5D7175;
+  --ink-3:#93A5A8;
+  --accent:#0F9E8E;
+  --accent-soft:#E4F5F2;
+  --alarm:#DC3B52;
+  --alarm-soft:#FDECEF;
+  --ok:#17A673;
+  --t-temp:#E2823C;
+  --t-hum:#2E8FD4;
+  --t-lux:#CB9A17;
+  --t-ruido:#C94263;
+  --sh:0 1px 2px rgba(20,45,50,.05), 0 10px 24px -16px rgba(20,45,50,.30);
+  --r:12px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
   --sans:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,sans-serif;
+  color-scheme:light;
 }
-:root[data-theme="light"],:root:not([data-theme="light"]){color-scheme:dark;}
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
-body{
-  background:var(--bg);
-  color:var(--ink);
-  font-family:var(--sans);
-  font-size:14px;
-  line-height:1.5;
-  -webkit-font-smoothing:antialiased;
-}
+body{background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
 button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
-:focus-visible{outline:2px solid var(--ch-hum);outline-offset:2px;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+::selection{background:var(--accent-soft);}
 
-/* ---------- header ---------- */
+/* ===== rail ===== */
+#rail{
+  position:fixed;left:0;top:0;bottom:0;width:62px;background:var(--card);
+  border-right:1px solid var(--line);display:flex;flex-direction:column;
+  align-items:center;padding:14px 0;gap:6px;z-index:50;
+}
+#rail .mark{
+  width:34px;height:34px;border-radius:9px;background:var(--accent);
+  display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;
+  letter-spacing:.02em;margin-bottom:12px;
+}
+#rail button{
+  width:38px;height:38px;border-radius:9px;border:none;background:transparent;
+  color:var(--ink-3);cursor:pointer;display:grid;place-items:center;
+  transition:background .14s,color .14s;
+}
+#rail button:hover{background:var(--line-soft);color:var(--ink-2);}
+#rail button.on{background:var(--accent-soft);color:var(--accent);}
+#rail .spacer{flex:1;}
+#rail svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+@media (max-width:900px){#rail{display:none;}}
+
+.shell{margin-left:62px;}
+@media (max-width:900px){.shell{margin-left:0;}}
+
+/* ===== topbar ===== */
 header{
-  position:sticky;top:0;z-index:40;
-  background:var(--panel);
-  border-bottom:1px solid var(--line);
-  display:flex;flex-wrap:wrap;align-items:center;gap:16px;
-  padding:10px 16px;
+  position:sticky;top:0;z-index:40;background:rgba(255,255,255,.92);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+  display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:12px 22px;
 }
-.brand{display:flex;align-items:baseline;gap:8px;margin-right:auto;}
-.brand b{font-weight:600;letter-spacing:.02em;}
-.brand span{color:var(--ink-faint);font-size:12px;}
+.titles h1{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em;}
+.titles p{margin:1px 0 0;font-size:12px;color:var(--ink-3);}
+.grow{flex:1;}
+.pill{
+  display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:500;
+  background:var(--line-soft);color:var(--ink-2);border-radius:100px;padding:5px 13px 5px 10px;
+}
+.pill .led{width:7px;height:7px;border-radius:50%;background:var(--ink-3);}
+.pill[data-s="run"]{background:var(--accent-soft);color:#0B7A6E;}
+.pill[data-s="run"] .led{background:var(--ok);box-shadow:0 0 0 3px rgba(23,166,115,.18);animation:blink 1.6s infinite;}
+.pill[data-s="pause"]{background:#FFF4E2;color:#9A6414;}
+.pill[data-s="pause"] .led{background:#E0942A;}
+.pill[data-s="end"]{background:var(--line-soft);color:var(--ink-2);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
 .clock{
-  font-family:var(--mono);font-size:30px;font-weight:500;
-  font-variant-numeric:tabular-nums;letter-spacing:.01em;
-  padding:0 4px;
+  font-family:var(--mono);font-size:27px;font-weight:500;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--ink);
 }
-.clock.paused{color:var(--ink-faint);}
-.state{
-  font-size:11px;letter-spacing:.06em;
-  border:1px solid var(--line);border-radius:100px;
-  padding:3px 10px;color:var(--ink-dim);
-}
-.state[data-s="run"]{color:var(--ok);border-color:var(--ok);}
-.state[data-s="pause"]{color:var(--ch-lux);border-color:var(--ch-lux);}
-.state[data-s="end"]{color:var(--ink-faint);}
+.clock.paused{color:var(--ink-3);}
 .controls{display:flex;gap:8px;flex-wrap:wrap;}
-button.btn{
-  background:var(--panel-2);border:1px solid var(--line);
-  border-radius:var(--radius);padding:8px 14px;cursor:pointer;
-  font-weight:500;transition:background .12s,border-color .12s;
+.btn{
+  background:var(--card);border:1px solid var(--line);border-radius:9px;
+  padding:8px 15px;cursor:pointer;font-weight:500;color:var(--ink-2);
+  box-shadow:0 1px 1px rgba(20,45,50,.04);transition:background .13s,border-color .13s,color .13s;
 }
-button.btn:hover:not(:disabled){background:#24444a;}
-button.btn:disabled{opacity:.35;cursor:not-allowed;}
-button.primary{background:var(--ok);border-color:var(--ok);color:#06231A;}
-button.primary:hover:not(:disabled){background:#9affc0;}
-button.danger{border-color:var(--alarm);color:var(--alarm);}
-button.danger:hover:not(:disabled){background:rgba(255,77,77,.12);}
-button.ghost{background:transparent;}
-button.icon{padding:8px 10px;}
+.btn:hover:not(:disabled){background:var(--line-soft);color:var(--ink);}
+.btn:disabled{opacity:.42;cursor:not-allowed;box-shadow:none;}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 1px 2px rgba(15,158,142,.3);}
+.btn.primary:hover:not(:disabled){background:#0C8B7D;color:#fff;}
+.btn.danger{color:var(--alarm);border-color:#F2CDD4;}
+.btn.danger:hover:not(:disabled){background:var(--alarm-soft);color:var(--alarm);}
+.btn.ghost{background:transparent;box-shadow:none;border-color:transparent;color:var(--ink-3);}
+.btn.ghost:hover:not(:disabled){background:var(--line-soft);color:var(--ink-2);}
+.btn.sm{padding:5px 11px;font-size:12px;border-radius:7px;}
+.btn.icon{padding:8px 11px;}
 
-/* ---------- alarm banner ---------- */
-#banner{
-  display:none;background:var(--alarm);color:#20060A;
-  padding:9px 16px;font-weight:600;
-  position:sticky;top:60px;z-index:39;
+/* ===== banner ===== */
+#banner{display:none;}
+#banner.on{
+  display:flex;align-items:center;gap:10px;
+  background:var(--alarm-soft);color:#9B2333;border-bottom:1px solid #F4D2D8;
+  padding:10px 22px;font-weight:500;font-size:13px;
+  position:sticky;top:61px;z-index:39;
 }
-#banner.on{display:block;animation:pulse 1.1s ease-in-out infinite;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.68}}
+#banner .led{width:8px;height:8px;border-radius:50%;background:var(--alarm);animation:blink 1s infinite;flex:none;}
 
-/* ---------- tablero ---------- */
-main{
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:10px;padding:10px;max-width:2000px;margin:0 auto;align-items:start;
+/* ===== layout ===== */
+main{padding:20px 22px 40px;max-width:1900px;margin:0 auto;}
+.eyebrow{
+  font-size:12px;color:var(--ink-3);font-weight:500;margin:0 0 11px;
+  display:flex;align-items:center;gap:9px;
 }
+.eyebrow::after{content:'';flex:1;height:1px;background:var(--line);}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:start;}
+@media (max-width:1400px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:720px){.grid{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0;}
 .full{grid-column:1/-1;}
-.col{display:flex;flex-direction:column;gap:10px;min-width:0;}
-@media (max-width:1440px){main{grid-template-columns:repeat(2,minmax(0,1fr));}}
-@media (max-width:760px){main{grid-template-columns:1fr;}}
+.block{margin-bottom:26px;}
 
-/* ---------- canales ---------- */
-.channels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
-@media (max-width:1440px){.channels{grid-template-columns:repeat(2,minmax(0,1fr));}}
-@media (max-width:620px){.channels{grid-template-columns:1fr;}}
+/* ===== tarjetas de canal ===== */
 .ch{
-  background:var(--panel);border:1px solid var(--line);
-  border-left:3px solid var(--c);border-radius:var(--radius);
-  padding:11px 13px 4px;position:relative;overflow:hidden;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--sh);padding:15px 16px 0;overflow:hidden;position:relative;
+  transition:border-color .2s,background .2s;
 }
-.ch.alarm{border-color:var(--alarm);border-left-color:var(--alarm);background:#2A1418;animation:pulse 1.1s ease-in-out infinite;}
-.ch-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
-.ch-name{font-size:12.5px;color:var(--ink-dim);font-weight:500;}
-.ch-range{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin-top:2px;}
+.ch::after{content:'';position:absolute;left:0;top:0;width:100%;height:3px;background:var(--c);opacity:.85;}
+.ch.alarm{border-color:#F0C3CB;background:#FFFAFB;}
+.ch.alarm::after{background:var(--alarm);}
+.ch-name{font-size:12.5px;color:var(--ink-2);font-weight:500;}
 .ch-val{
   font-family:var(--mono);font-variant-numeric:tabular-nums;
-  font-size:38px;font-weight:500;line-height:1;color:var(--c);
-  display:flex;align-items:baseline;gap:4px;
+  font-size:36px;font-weight:500;line-height:1.1;letter-spacing:-.025em;
+  color:var(--ink);display:flex;align-items:baseline;gap:5px;margin-top:3px;
 }
-.ch.alarm .ch-val,.ch.alarm .ch-name{color:var(--alarm);}
-.ch-unit{font-size:14px;color:var(--ink-dim);font-weight:400;}
-.ch canvas{display:block;width:100%;height:84px;margin-top:7px;}
-.ch-foot{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--ink-faint);padding:2px 0 5px;}
+.ch-unit{font-size:14px;color:var(--ink-3);font-weight:400;}
+.ch.alarm .ch-val{color:var(--alarm);}
+.ch-range{
+  display:inline-block;font-family:var(--mono);font-size:10.5px;
+  background:var(--line-soft);color:var(--ink-2);border-radius:100px;padding:2px 9px;margin-top:7px;
+}
+.ch.alarm .ch-range{background:var(--alarm-soft);color:#A02A3C;}
+.ch canvas{display:block;width:100%;height:76px;margin-top:10px;}
+.ch-foot{
+  display:flex;justify-content:space-between;font-family:var(--mono);
+  font-size:10.5px;color:var(--ink-3);border-top:1px solid var(--line-soft);
+  padding:8px 0;margin-top:2px;
+}
 
-/* ---------- paneles ---------- */
+/* ===== paneles ===== */
 .card{
-  background:var(--panel);border:1px solid var(--line);
-  border-radius:var(--radius);display:flex;flex-direction:column;min-width:0;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--sh);display:flex;flex-direction:column;min-width:0;overflow:hidden;
 }
 .card>h2{
-  margin:0;font-size:12px;font-weight:600;color:var(--ink-dim);
-  padding:9px 12px;border-bottom:1px solid var(--line);
-  display:flex;align-items:center;gap:8px;
+  margin:0;font-size:13px;font-weight:600;color:var(--ink);
+  padding:14px 16px 0;display:flex;align-items:center;gap:8px;
 }
 .card>h2 .sp{margin-left:auto;}
-.card .body{padding:12px;}
-.card .body.scroll{max-height:230px;overflow:auto;}
+.card>.sub{margin:2px 16px 0;font-size:11.5px;color:var(--ink-3);}
+.card .body{padding:14px 16px 16px;}
 .count{
-  font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);
-  border:1px solid var(--line);border-radius:100px;padding:1px 7px;margin-left:auto;
+  font-family:var(--mono);font-size:11px;color:var(--accent);background:var(--accent-soft);
+  border-radius:100px;padding:2px 9px;margin-left:auto;font-weight:500;
 }
 
-/* ---------- forms ---------- */
+/* ===== formularios ===== */
 label.f{display:block;margin-bottom:11px;}
-label.f>span{display:block;font-size:11.5px;color:var(--ink-faint);margin-bottom:4px;}
-input[type=text],input[type=number],input[type=date],select,textarea{
-  width:100%;background:var(--bg);border:1px solid var(--line);
-  border-radius:var(--radius);padding:7px 9px;
+label.f>span{display:block;font-size:11.5px;color:var(--ink-2);margin-bottom:5px;font-weight:500;}
+input[type=text],input[type=number],select,textarea{
+  width:100%;background:#FAFCFC;border:1px solid var(--line);border-radius:8px;
+  padding:8px 11px;transition:border-color .13s,background .13s;
 }
-textarea{resize:vertical;min-height:70px;line-height:1.55;}
-input:disabled,textarea:disabled,select:disabled{opacity:.55;}
+input[type=text]:focus,input[type=number]:focus,select:focus,textarea:focus{background:#fff;border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(15,158,142,.12);}
+input::placeholder,textarea::placeholder{color:var(--ink-3);}
+textarea{resize:vertical;min-height:82px;line-height:1.55;}
+input:disabled,textarea:disabled,select:disabled{background:var(--line-soft);color:var(--ink-3);}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
 
-/* ---------- search + chips ---------- */
+/* ===== buscadores ===== */
 .picker{position:relative;}
 .results{
-  position:absolute;z-index:20;left:0;right:0;top:100%;
-  background:var(--panel-2);border:1px solid var(--line);border-top:none;
-  max-height:210px;overflow:auto;display:none;
+  position:absolute;z-index:30;left:0;right:0;top:calc(100% + 5px);
+  background:var(--card);border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 12px 30px -10px rgba(20,45,50,.28);
+  max-height:230px;overflow:auto;display:none;padding:5px;
 }
 .results.on{display:block;}
-.results div{padding:7px 10px;cursor:pointer;border-bottom:1px solid rgba(37,66,70,.6);}
-.results div:hover,.results div.hi{background:#2A4A50;}
-.results small{color:var(--ink-faint);display:block;font-size:11px;}
-.results .empty{color:var(--ink-faint);cursor:default;}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+.results div{padding:8px 10px;cursor:pointer;border-radius:7px;}
+.results div:hover,.results div.hi{background:var(--accent-soft);}
+.results small{color:var(--ink-3);display:block;font-size:11px;}
+.results .empty{color:var(--ink-3);cursor:default;font-size:12.5px;}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px;}
 .chip{
-  display:inline-flex;align-items:center;gap:7px;
-  background:var(--panel-2);border:1px solid var(--line);
-  border-radius:100px;padding:4px 6px 4px 11px;font-size:12.5px;
+  display:inline-flex;align-items:center;gap:7px;background:#F7FAFA;
+  border:1px solid var(--line);border-radius:100px;padding:5px 7px 5px 12px;font-size:12.5px;
 }
 .chip b{font-weight:500;}
-.chip small{color:var(--ink-faint);}
-.chip button{background:none;border:none;color:var(--ink-faint);cursor:pointer;padding:0 5px;font-size:15px;line-height:1;}
+.chip small{color:var(--ink-3);}
+.chip button{background:none;border:none;color:var(--ink-3);cursor:pointer;padding:0 4px;font-size:15px;line-height:1;border-radius:50%;}
 .chip button:hover{color:var(--alarm);}
-.chip input.qty{width:46px;background:var(--bg);border:1px solid var(--line);border-radius:3px;padding:2px 4px;font-family:var(--mono);font-size:11.5px;text-align:center;}
-
-/* ---------- steps ---------- */
-ol.steps{list-style:none;margin:0;padding:0;counter-reset:s;}
-ol.steps li{
-  display:flex;gap:10px;align-items:flex-start;
-  padding:8px 0;border-bottom:1px solid rgba(37,66,70,.55);
+.chip input.qty{
+  width:44px;background:#fff;border:1px solid var(--line);border-radius:6px;
+  padding:2px 4px;font-family:var(--mono);font-size:11.5px;text-align:center;
 }
+.empty-note{color:var(--ink-3);font-size:12.5px;padding:4px 0;}
+
+/* ===== pasos ===== */
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s;}
+ol.steps li{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line-soft);}
 ol.steps li:last-child{border-bottom:none;}
 ol.steps li::before{
-  counter-increment:s;content:counter(s);
-  font-family:var(--mono);font-size:11px;color:var(--ink-faint);
-  border:1px solid var(--line);border-radius:50%;
-  width:20px;height:20px;flex:none;display:grid;place-items:center;margin-top:1px;
+  counter-increment:s;content:counter(s);font-family:var(--mono);font-size:11px;
+  color:var(--ink-3);background:var(--line-soft);border-radius:50%;
+  width:21px;height:21px;flex:none;display:grid;place-items:center;margin-top:1px;
 }
-ol.steps li.done{color:var(--ink-faint);}
-ol.steps li.done .txt{text-decoration:line-through;}
-ol.steps .txt{flex:1;}
-ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--ok);display:block;margin-top:2px;}
-.step-actions{display:flex;gap:4px;}
+ol.steps li.done::before{background:var(--accent-soft);color:var(--accent);}
+ol.steps li.done .txt{color:var(--ink-3);text-decoration:line-through;}
+ol.steps .txt{flex:1;font-size:13px;}
+ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);display:block;margin-top:2px;text-decoration:none;}
+.step-actions{display:flex;gap:2px;}
 
-/* ---------- log ---------- */
-#log{max-height:280px;overflow:auto;font-family:var(--mono);font-size:11.5px;}
-#log .e{display:flex;gap:10px;padding:5px 14px;border-bottom:1px solid rgba(37,66,70,.5);}
-#log time{color:var(--ink-faint);flex:none;}
-#log .e[data-k="alarma"] span{color:var(--alarm);}
-#log .e[data-k="normal"] span{color:var(--ok);}
-#log .e[data-k="paso"] span{color:var(--ch-hum);}
-#log .empty{padding:14px;color:var(--ink-faint);font-family:var(--sans);}
+/* ===== log ===== */
+#log{max-height:300px;overflow:auto;padding:6px 0 10px;}
+#log .e{display:flex;gap:10px;align-items:flex-start;padding:7px 16px;}
+#log .e+.e{border-top:1px solid var(--line-soft);}
+#log time{font-family:var(--mono);font-size:11px;color:var(--ink-3);flex:none;padding-top:1px;}
+#log .e span{font-size:12.5px;color:var(--ink-2);}
+#log .e::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--ink-3);flex:none;margin-top:6px;}
+#log .e[data-k="alarma"]::before{background:var(--alarm);}
+#log .e[data-k="alarma"] span{color:#A02A3C;}
+#log .e[data-k="normal"]::before{background:var(--ok);}
+#log .e[data-k="paso"]::before{background:var(--t-hum);}
+#log .e[data-k="inicio"]::before,#log .e[data-k="fin"]::before{background:var(--accent);}
+#log .empty{padding:10px 16px;color:var(--ink-3);font-size:12.5px;}
 
-/* ---------- misc ---------- */
-.hint{font-size:11.5px;color:var(--ink-faint);line-height:1.5;}
-.hint code{background:var(--bg);padding:1px 4px;border-radius:3px;font-family:var(--mono);font-size:11px;}
-.err{color:var(--alarm);font-size:11.5px;margin-top:8px;}
-.thr{display:grid;grid-template-columns:1fr 66px 66px;gap:8px;align-items:center;margin-bottom:9px;}
-.thr .nm{display:flex;align-items:center;gap:7px;font-size:12.5px;}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none;}
-.thr input{font-family:var(--mono);text-align:center;padding:5px;}
-.thr-head{display:grid;grid-template-columns:1fr 66px 66px;gap:8px;font-size:10.5px;color:var(--ink-faint);margin-bottom:6px;text-align:center;}
+/* ===== umbrales ===== */
+.thr-head{display:grid;grid-template-columns:1fr 62px 62px;gap:8px;font-size:10.5px;color:var(--ink-3);margin-bottom:7px;text-align:center;}
 .thr-head span:first-child{text-align:left;}
-.seg{display:flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
-.seg button{flex:1;background:transparent;border:none;padding:7px;cursor:pointer;color:var(--ink-dim);}
-.seg button.on{background:var(--panel-2);color:var(--ink);font-weight:500;}
-.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);}
-.stat-grid div{background:var(--panel);padding:9px 10px;}
-.stat-grid b{font-family:var(--mono);font-size:17px;font-weight:500;display:block;}
-.stat-grid small{color:var(--ink-faint);font-size:10.5px;}
+.thr{display:grid;grid-template-columns:1fr 62px 62px;gap:8px;align-items:center;margin-bottom:8px;}
+.thr .nm{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2);}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none;}
+.thr input{font-family:var(--mono);text-align:center;padding:6px 4px;}
+
+/* ===== varios ===== */
+.seg{display:flex;background:var(--line-soft);border-radius:9px;padding:3px;gap:3px;}
+.seg button{flex:1;background:transparent;border:none;padding:7px;cursor:pointer;color:var(--ink-2);border-radius:7px;font-size:12.5px;}
+.seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(20,45,50,.09);}
+.hint{font-size:11.5px;color:var(--ink-3);line-height:1.5;}
+.err{color:var(--alarm);font-size:11.5px;margin-top:9px;}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);}
+.stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+@media (max-width:720px){.stat-grid{grid-template-columns:1fr 1fr;}}
+.stat-grid .s{border:1px solid var(--line);border-radius:10px;padding:13px 14px;background:#FAFCFC;}
+.stat-grid .s small{color:var(--ink-3);font-size:11.5px;display:block;}
+.stat-grid .s b{font-family:var(--mono);font-size:24px;font-weight:500;display:block;margin:4px 0 3px;letter-spacing:-.02em;}
+.stat-grid .s .d{font-family:var(--mono);font-size:11px;color:var(--ink-3);}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="brand"><b>SIMQ</b><span>Monitor de sala de cirugía</span></div>
-  <div class="state" id="state" data-s="idle">En espera</div>
-  <div class="clock paused" id="clock">00:00:00</div>
-  <div class="controls">
-    <button class="btn primary" id="btnStart">Iniciar</button>
-    <button class="btn" id="btnPause" disabled>Pausar</button>
-    <button class="btn danger" id="btnEnd" disabled>Finalizar</button>
-    <button class="btn icon ghost" id="btnMute" title="Silenciar alarmas" aria-label="Silenciar alarmas">🔔</button>
-  </div>
-</header>
+<nav id="rail" aria-label="Secciones">
+  <div class="mark">SQ</div>
+  <button data-go="secAmb" class="on" title="Ambiente" aria-label="Ambiente"><svg viewBox="0 0 24 24"><path d="M3 15l4-5 4 4 4-7 6 8"/></svg></button>
+  <button data-go="secPac" title="Paciente" aria-label="Paciente"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6"/></svg></button>
+  <button data-go="secEq" title="Equipos e insumos" aria-label="Equipos e insumos"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="13" rx="2"/><path d="M8 21h8M12 17.5V21"/></svg></button>
+  <button data-go="secOp" title="Eventos y umbrales" aria-label="Eventos y umbrales"><svg viewBox="0 0 24 24"><path d="M12 4.5v3M12 16.5v3M4.5 12h3M16.5 12h3"/><circle cx="12" cy="12" r="4"/></svg></button>
+  <div class="spacer"></div>
+  <button id="btnMute" title="Silenciar alarmas" aria-label="Silenciar alarmas"><svg viewBox="0 0 24 24"><path d="M6 9.5h3l4-3.2v11.4l-4-3.2H6z"/><path id="mIcon" d="M16.5 9.4a4 4 0 010 5.2"/></svg></button>
+</nav>
 
-<div id="banner" role="status"></div>
+<div class="shell">
+  <header>
+    <div class="titles">
+      <h1>Monitoreo de sala de cirugía</h1>
+      <p id="hoy"></p>
+    </div>
+    <div class="grow"></div>
+    <div class="pill" id="state" data-s="idle"><i class="led"></i><span id="stateTxt">En espera</span></div>
+    <div class="clock paused" id="clock">00:00:00</div>
+    <div class="controls">
+      <button class="btn primary" id="btnStart">Iniciar</button>
+      <button class="btn" id="btnPause" disabled>Pausar</button>
+      <button class="btn danger" id="btnEnd" disabled>Finalizar</button>
+    </div>
+  </header>
 
-<main>
-  <div class="channels full" id="channels"></div>
+  <div id="banner" role="status"><i class="led"></i><span id="bannerTxt"></span></div>
 
-  <div class="col">
-    <section class="card">
-      <h2>Paciente</h2>
-      <div class="body">
-        <label class="f"><span>Nombre completo</span><input type="text" id="pNombre" autocomplete="off"></label>
-        <div class="row2">
-          <label class="f"><span>Documento</span><input type="text" id="pDoc" autocomplete="off"></label>
-          <label class="f"><span>Edad</span><input type="number" id="pEdad" min="0" max="120"></label>
+  <main>
+    <section class="block" id="secAmb">
+      <p class="eyebrow">Condiciones ambientales</p>
+      <div class="grid" id="channels"></div>
+    </section>
+
+    <section class="block" id="secPac">
+      <p class="eyebrow">Sesión</p>
+      <div class="grid">
+        <div class="col">
+          <section class="card">
+            <h2>Paciente</h2>
+            <div class="body">
+              <label class="f"><span>Nombre completo</span><input type="text" id="pNombre" autocomplete="off"></label>
+              <div class="row2">
+                <label class="f"><span>Documento</span><input type="text" id="pDoc" autocomplete="off"></label>
+                <label class="f"><span>Edad</span><input type="number" id="pEdad" min="0" max="120"></label>
+              </div>
+              <div class="row2">
+                <label class="f"><span>Sexo</span>
+                  <select id="pSexo"><option value="">—</option><option>Femenino</option><option>Masculino</option><option>Otro</option></select>
+                </label>
+                <label class="f"><span>Quirófano</span><input type="text" id="pSala" placeholder="Sala 3"></label>
+              </div>
+              <label class="f" style="margin:0"><span>Diagnóstico</span><input type="text" id="pDx" autocomplete="off"></label>
+            </div>
+          </section>
         </div>
-        <div class="row2">
-          <label class="f"><span>Sexo</span>
-            <select id="pSexo"><option value="">—</option><option>Femenino</option><option>Masculino</option><option>Otro</option></select>
-          </label>
-          <label class="f"><span>Quirófano</span><input type="text" id="pSala" placeholder="Sala 3"></label>
+
+        <div class="col">
+          <section class="card">
+            <h2>Procedimiento</h2>
+            <div class="body">
+              <label class="f"><span>Nombre</span>
+                <div class="picker">
+                  <input type="text" id="procInput" autocomplete="off" placeholder="Buscar o escribir…">
+                  <div class="results" id="procRes"></div>
+                </div>
+              </label>
+              <label class="f" style="margin:0"><span>Descripción</span><textarea id="procDesc" placeholder="Hallazgos, técnica, observaciones relevantes."></textarea></label>
+            </div>
+          </section>
         </div>
-        <label class="f" style="margin-bottom:0"><span>Diagnóstico</span><input type="text" id="pDx" autocomplete="off"></label>
+
+        <div class="col">
+          <section class="card">
+            <h2>Personal asistencial <span class="count" id="cPers">0</span></h2>
+            <p class="sub">Quién entra a la sala y con qué rol.</p>
+            <div class="body">
+              <div class="picker">
+                <input type="text" id="persInput" autocomplete="off" placeholder="Buscar por nombre o rol…">
+                <div class="results" id="persRes"></div>
+              </div>
+              <div class="chips" id="persChips"></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="col">
+          <section class="card" id="secOp">
+            <h2>Paso a paso <span class="count" id="cSteps">0</span></h2>
+            <p class="sub">Cada paso queda con su hora al marcarlo.</p>
+            <div class="body">
+              <div style="display:flex;gap:8px">
+                <input type="text" id="stepInput" placeholder="Describir el paso…" autocomplete="off">
+                <button class="btn" id="btnAddStep">Añadir</button>
+              </div>
+              <ol class="steps" id="stepList" style="margin-top:6px"></ol>
+            </div>
+          </section>
+        </div>
       </div>
     </section>
 
-    <section class="card">
-      <h2>Procedimiento</h2>
-      <div class="body">
-        <label class="f"><span>Nombre</span>
-          <div class="picker">
-            <input type="text" id="procInput" autocomplete="off" placeholder="Buscar o escribir…">
-            <div class="results" id="procRes"></div>
-          </div>
-        </label>
-        <label class="f" style="margin-bottom:0"><span>Descripción</span><textarea id="procDesc" placeholder="Hallazgos, técnica, observaciones relevantes."></textarea></label>
-      </div>
-    </section>
-  </div>
-
-  <div class="col">
-    <section class="card">
-      <h2>Personal asistencial <span class="count" id="cPers">0</span></h2>
-      <div class="body">
-        <div class="picker">
-          <input type="text" id="persInput" autocomplete="off" placeholder="Buscar por nombre o rol…">
-          <div class="results" id="persRes"></div>
+    <section class="block" id="secEq">
+      <p class="eyebrow">Recursos y operación</p>
+      <div class="grid">
+        <div class="col">
+          <section class="card">
+            <h2>Equipos biomédicos <span class="count" id="cEq">0</span></h2>
+            <div class="body">
+              <div class="picker">
+                <input type="text" id="eqInput" autocomplete="off" placeholder="Buscar en el inventario…">
+                <div class="results" id="eqRes"></div>
+              </div>
+              <div class="chips" id="eqChips"></div>
+              <div class="toolbar"><button class="btn ghost sm" id="btnImportEq">Cargar inventario</button></div>
+            </div>
+          </section>
         </div>
-        <div class="chips" id="persChips"></div>
-      </div>
-    </section>
 
-    <section class="card">
-      <h2>Equipos biomédicos <span class="count" id="cEq">0</span></h2>
-      <div class="body">
-        <div class="picker">
-          <input type="text" id="eqInput" autocomplete="off" placeholder="Buscar en el inventario…">
-          <div class="results" id="eqRes"></div>
+        <div class="col">
+          <section class="card">
+            <h2>Instrumentación e insumos <span class="count" id="cIns">0</span></h2>
+            <div class="body">
+              <div class="picker">
+                <input type="text" id="insInput" autocomplete="off" placeholder="Buscar insumo o instrumental…">
+                <div class="results" id="insRes"></div>
+              </div>
+              <div class="chips" id="insChips"></div>
+            </div>
+          </section>
         </div>
-        <div class="chips" id="eqChips"></div>
-        <div class="toolbar">
-          <button class="btn ghost" id="btnImportEq" style="padding:5px 11px;font-size:12px">Cargar inventario</button>
+
+        <div class="col">
+          <section class="card">
+            <h2>Registro de eventos <button class="btn ghost sm sp" id="btnNote">Añadir nota</button></h2>
+            <div id="log"><div class="empty">Los eventos aparecen aquí al iniciar la sesión.</div></div>
+          </section>
+        </div>
+
+        <div class="col">
+          <section class="card">
+            <h2>Umbrales de alerta <button class="btn ghost sm sp" id="btnTest">Probar</button></h2>
+            <div class="body">
+              <div class="thr-head"><span>Variable</span><span>Mín</span><span>Máx</span></div>
+              <div id="thrList"></div>
+              <p class="hint" style="margin:10px 0 0">Contrastar con la Resolución 3100 de 2019 y ASHRAE 170 antes de usarlos como criterio formal.</p>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Fuente de datos</h2>
+            <div class="body">
+              <div class="seg" id="srcSeg">
+                <button data-src="sim" class="on">Simulación</button>
+                <button data-src="local">ESP32</button>
+                <button data-src="supabase">Supabase</button>
+              </div>
+              <div id="localCfg" style="display:none;margin-top:13px">
+                <label class="f" style="margin:0"><span>Dirección IP de la ESP32</span><input type="text" id="espIp" placeholder="192.168.1.45"></label>
+                <div class="err" id="espErr"></div>
+              </div>
+              <div id="supaCfg" style="display:none;margin-top:13px">
+                <label class="f"><span>URL del proyecto</span><input type="text" id="supaUrl" placeholder="https://xxxx.supabase.co"></label>
+                <label class="f"><span>Anon key</span><input type="text" id="supaKey" placeholder="eyJhbGciOi…"></label>
+                <label class="f" style="margin:0"><span>ID del dispositivo</span><input type="text" id="supaDev" value="esp32-quirofano-01"></label>
+                <div class="err" id="supaErr"></div>
+              </div>
+              <p class="hint" style="margin:11px 0 0" id="srcHint">Lecturas sintéticas cada segundo para probar alertas, gráficas y reporte sin hardware conectado.</p>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Reporte</h2>
+            <div class="body">
+              <button class="btn primary" id="btnPdf" disabled style="width:100%">Descargar reporte en PDF</button>
+              <p class="hint" style="margin:11px 0 0">Se habilita al finalizar la sesión.</p>
+            </div>
+          </section>
         </div>
       </div>
     </section>
-  </div>
 
-  <div class="col">
-    <section class="card">
-      <h2>Instrumentación e insumos <span class="count" id="cIns">0</span></h2>
-      <div class="body">
-        <div class="picker">
-          <input type="text" id="insInput" autocomplete="off" placeholder="Buscar insumo o instrumental…">
-          <div class="results" id="insRes"></div>
-        </div>
-        <div class="chips" id="insChips"></div>
-      </div>
+    <section class="block" id="summaryCard" style="display:none">
+      <p class="eyebrow">Resumen de la sesión</p>
+      <div id="summary"></div>
     </section>
-
-    <section class="card">
-      <h2>Paso a paso <span class="count" id="cSteps">0</span></h2>
-      <div class="body">
-        <div style="display:flex;gap:8px">
-          <input type="text" id="stepInput" placeholder="Describir el paso…" autocomplete="off">
-          <button class="btn" id="btnAddStep">Añadir</button>
-        </div>
-        <ol class="steps" id="stepList" style="margin-top:10px"></ol>
-      </div>
-    </section>
-  </div>
-
-  <div class="col">
-    <section class="card">
-      <h2>Registro de eventos <button class="btn ghost sp" id="btnNote" style="padding:3px 9px;font-size:11.5px">Añadir nota</button></h2>
-      <div id="log"><div class="empty">Los eventos aparecen aquí al iniciar la sesión.</div></div>
-    </section>
-
-    <section class="card">
-      <h2>Umbrales de alerta <button class="btn ghost sp" id="btnTest" style="padding:3px 9px;font-size:11.5px">Probar</button></h2>
-      <div class="body">
-        <div class="thr-head"><span>Variable</span><span>Mín</span><span>Máx</span></div>
-        <div id="thrList"></div>
-        <p class="hint" style="margin:8px 0 0">Contrastar con la Resolución 3100 de 2019 y ASHRAE 170 antes de usarlos como criterio formal.</p>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Fuente de datos</h2>
-      <div class="body">
-        <div class="seg" id="srcSeg">
-          <button data-src="sim" class="on">Simulación</button>
-          <button data-src="supabase">Supabase</button>
-        </div>
-        <div id="supaCfg" style="display:none;margin-top:12px">
-          <label class="f"><span>URL del proyecto</span><input type="text" id="supaUrl" placeholder="https://xxxx.supabase.co"></label>
-          <label class="f"><span>Anon key</span><input type="text" id="supaKey" placeholder="eyJhbGciOi…"></label>
-          <label class="f" style="margin-bottom:0"><span>ID del dispositivo</span><input type="text" id="supaDev" value="esp32-quirofano-01"></label>
-          <div class="err" id="supaErr"></div>
-        </div>
-        <p class="hint" style="margin:10px 0 0" id="srcHint">Genera lecturas sintéticas cada segundo para probar alertas, gráficas y reporte sin hardware conectado.</p>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Reporte</h2>
-      <div class="body">
-        <button class="btn primary" id="btnPdf" disabled style="width:100%">Descargar reporte en PDF</button>
-        <p class="hint" style="margin:10px 0 0">Se habilita al finalizar la sesión.</p>
-      </div>
-    </section>
-  </div>
-
-  <section class="card full" id="summaryCard" style="display:none">
-    <h2>Resumen de la sesión</h2>
-    <div class="body" id="summary"></div>
-  </section>
-</main>
+  </main>
+</div>
 
 <canvas id="exportCanvas" width="1400" height="360" style="display:none"></canvas>
 
@@ -384,15 +468,15 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--ok);display:b
 (function(){
 "use strict";
 
-/* ============ configuración de canales ============ */
+/* ============ canales ============ */
 const CH = [
-  {id:'temp', nombre:'Temperatura', unidad:'°C',  color:'#7DF9A8', dec:1, min:18,  max:24,  base:21.5, paso:0.12, escala:[14,30]},
-  {id:'hum',  nombre:'Humedad relativa', unidad:'%', color:'#4CC9F0', dec:0, min:30, max:60, base:45,  paso:0.7,  escala:[15,80]},
-  {id:'lux',  nombre:'Iluminación', unidad:'lux', color:'#F9D949', dec:0, min:300, max:500, base:410, paso:11,   escala:[0,900]},
-  {id:'ruido',nombre:'Ruido', unidad:'dB',       color:'#F2789F', dec:1, min:0,   max:45,  base:38,  paso:1.4,  escala:[25,95]}
+  {id:'temp', nombre:'Temperatura',      unidad:'°C',  color:'#E2823C', dec:1, min:18,  max:24,  base:21.5, paso:0.12, escala:[14,30]},
+  {id:'hum',  nombre:'Humedad relativa', unidad:'%',   color:'#2E8FD4', dec:0, min:30,  max:60,  base:45,   paso:0.7,  escala:[15,80]},
+  {id:'lux',  nombre:'Iluminación',      unidad:'lux', color:'#CB9A17', dec:0, min:300, max:500, base:410,  paso:11,   escala:[0,900]},
+  {id:'ruido',nombre:'Ruido',            unidad:'dB',  color:'#C94263', dec:1, min:0,   max:45,  base:38,   paso:1.4,  escala:[25,95]}
 ];
-const VENTANA = 150;            // puntos visibles en la traza
-const DEBOUNCE = 3;             // lecturas seguidas fuera de rango para disparar
+const VENTANA = 150;
+const DEBOUNCE = 3;
 
 /* ============ catálogos ============ */
 const CAT = {
@@ -435,16 +519,15 @@ const CAT = {
 
 /* ============ estado ============ */
 const S = {
-  fase:'idle',            // idle | run | pause | end
-  t0:null, acumulado:0, tickId:null, dataId:null,
-  inicio:null, fin:null, pausas:[],
+  fase:'idle', t0:null, acumulado:0, tickId:null, dataId:null,
+  inicio:null, fin:null,
   datos:{}, fuera:{}, alarma:{}, streak:{},
   personal:[], equipos:[], insumos:[], pasos:[], eventos:[],
   procedimiento:'', mute:false, fuente:'sim', ultimoBeep:0
 };
 CH.forEach(c=>{S.datos[c.id]=[];S.fuera[c.id]=0;S.alarma[c.id]=false;S.streak[c.id]=0;});
 
-const $ = s=>document.querySelector(s);
+const $  = s=>document.querySelector(s);
 const $$ = s=>Array.from(document.querySelectorAll(s));
 const ch = id=>CH.find(c=>c.id===id);
 const pad = n=>String(n).padStart(2,'0');
@@ -452,7 +535,11 @@ const hhmmss = ms=>{const t=Math.floor(ms/1000);return `${pad(Math.floor(t/3600)
 const hora = d=>`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 const fecha = d=>`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
 
-/* ============ persistencia local ============ */
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+(function(){const d=new Date();$('#hoy').textContent=`${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;})();
+
+/* ============ persistencia ============ */
 function guardar(){
   try{
     localStorage.setItem('simq.cfg',JSON.stringify({
@@ -468,7 +555,7 @@ function cargar(){
     if(Array.isArray(d.umbrales))d.umbrales.forEach(u=>{const c=ch(u.id);if(c){c.min=+u.min;c.max=+u.max;}});
     if(Array.isArray(d.equipos)&&d.equipos.length)CAT.equipos=d.equipos;
     if(typeof d.mute==='boolean')S.mute=d.mute;
-  }catch(e){/* configuración corrupta o sin acceso: se usan los valores por defecto */}
+  }catch(e){/* configuración inválida: se usan los valores por defecto */}
 }
 cargar();
 
@@ -480,46 +567,41 @@ function beep(grave){
     actx=actx||new (window.AudioContext||window.webkitAudioContext)();
     if(actx.state==='suspended')actx.resume();
     const t=actx.currentTime;
-    [0,0.22,0.44].forEach((off,i)=>{
+    [0,0.22,0.44].forEach(off=>{
       const o=actx.createOscillator(),g=actx.createGain();
       o.type='square'; o.frequency.value=grave?520:880;
       g.gain.setValueAtTime(0.0001,t+off);
-      g.gain.exponentialRampToValueAtTime(0.16,t+off+0.012);
+      g.gain.exponentialRampToValueAtTime(0.15,t+off+0.012);
       g.gain.exponentialRampToValueAtTime(0.0001,t+off+0.16);
       o.connect(g);g.connect(actx.destination);o.start(t+off);o.stop(t+off+0.18);
     });
-  }catch(e){/* el navegador bloqueó el audio hasta la primera interacción */}
+  }catch(e){/* el navegador bloquea el audio hasta la primera interacción */}
 }
 
-/* ============ canales: render ============ */
+/* ============ render de canales ============ */
 const canvases={};
 function construirCanales(){
-  const cont=$('#channels');
-  cont.innerHTML=CH.map(c=>`
+  $('#channels').innerHTML=CH.map(c=>`
     <article class="ch" id="ch-${c.id}" style="--c:${c.color}">
-      <div class="ch-top">
-        <div>
-          <div class="ch-name">${c.nombre}</div>
-          <div class="ch-range" id="rg-${c.id}"></div>
-        </div>
-        <div class="ch-val"><span id="v-${c.id}">--</span><span class="ch-unit">${c.unidad}</span></div>
-      </div>
+      <div class="ch-name">${c.nombre}</div>
+      <div class="ch-val"><span id="v-${c.id}">--</span><span class="ch-unit">${c.unidad}</span></div>
+      <div class="ch-range" id="rg-${c.id}"></div>
       <canvas id="cv-${c.id}" aria-hidden="true"></canvas>
       <div class="ch-foot"><span id="mn-${c.id}">mín --</span><span id="pr-${c.id}">prom --</span><span id="mx-${c.id}">máx --</span></div>
     </article>`).join('');
   CH.forEach(c=>{canvases[c.id]=$('#cv-'+c.id);});
   refrescarRangos();
-  window.addEventListener('resize',()=>CH.forEach(c=>dibujar(c)));
-  CH.forEach(c=>dibujar(c));
+  window.addEventListener('resize',()=>CH.forEach(dibujar));
+  CH.forEach(dibujar);
 }
 function refrescarRangos(){
-  CH.forEach(c=>{$('#rg-'+c.id).textContent=`${c.min} – ${c.max} ${c.unidad}`;});
+  CH.forEach(c=>{$('#rg-'+c.id).textContent=`rango ${c.min} – ${c.max} ${c.unidad}`;});
 }
 
 function dibujar(c){
   const cv=canvases[c.id]; if(!cv)return;
   const dpr=window.devicePixelRatio||1;
-  const w=cv.clientWidth||300, h=92;
+  const w=cv.clientWidth||300, h=76;
   if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){
     cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
   }
@@ -529,34 +611,42 @@ function dibujar(c){
 
   const serie=S.datos[c.id].slice(-VENTANA);
   const [lo,hi]=escalaVisible(c,serie);
-  const y=v=>h-4-((v-lo)/(hi-lo))*(h-8);
+  const y=v=>h-4-((v-lo)/(hi-lo))*(h-10);
+  const trazo=S.alarma[c.id]?'#DC3B52':c.color;
 
-  // rejilla
-  x.strokeStyle='rgba(37,66,70,.65)';x.lineWidth=1;
-  for(let i=1;i<4;i++){const yy=Math.round((h/4)*i)+.5;x.beginPath();x.moveTo(0,yy);x.lineTo(w,yy);x.stroke();}
-
-  // banda dentro de rango
   const yMax=y(Math.min(c.max,hi)), yMin=y(Math.max(c.min,lo));
-  x.fillStyle=c.color+'12';
+  x.fillStyle='#F3F6F7';
   x.fillRect(0,yMax,w,Math.max(0,yMin-yMax));
-  x.strokeStyle=c.color+'55';x.setLineDash([3,4]);
+  x.strokeStyle='#DCE4E5';x.lineWidth=1;x.setLineDash([3,4]);
   [yMax,yMin].forEach(yy=>{x.beginPath();x.moveTo(0,yy+.5);x.lineTo(w,yy+.5);x.stroke();});
   x.setLineDash([]);
 
   if(serie.length<2){
-    x.fillStyle='#5C7E81';x.font='11px IBM Plex Mono, monospace';
-    x.fillText(S.fase==='idle'?'sin señal':'esperando lecturas…',8,h/2+4);
+    x.fillStyle='#B4C2C4';x.font='11px IBM Plex Mono, monospace';
+    x.fillText(S.fase==='idle'?'sin señal':'esperando lecturas…',2,h/2+4);
     return;
   }
+
   const dx=w/(VENTANA-1), off=w-(serie.length-1)*dx;
+  const px=i=>off+i*dx;
+
+  const grad=x.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,trazo+'38');
+  grad.addColorStop(1,trazo+'00');
   x.beginPath();
-  serie.forEach((p,i)=>{const px=off+i*dx, py=y(p.v); i?x.lineTo(px,py):x.moveTo(px,py);});
-  x.strokeStyle=S.alarma[c.id]?'#FF4D4D':c.color;x.lineWidth=1.6;
-  x.lineJoin='round';x.stroke();
+  x.moveTo(px(0),h);
+  serie.forEach((p,i)=>x.lineTo(px(i),y(p.v)));
+  x.lineTo(px(serie.length-1),h);
+  x.closePath();x.fillStyle=grad;x.fill();
+
+  x.beginPath();
+  serie.forEach((p,i)=>{i?x.lineTo(px(i),y(p.v)):x.moveTo(px(i),y(p.v));});
+  x.strokeStyle=trazo;x.lineWidth=1.9;x.lineJoin='round';x.lineCap='round';x.stroke();
 
   const ult=serie[serie.length-1];
-  x.beginPath();x.arc(off+(serie.length-1)*dx,y(ult.v),2.8,0,Math.PI*2);
-  x.fillStyle=S.alarma[c.id]?'#FF4D4D':c.color;x.fill();
+  x.beginPath();x.arc(px(serie.length-1),y(ult.v),3.2,0,Math.PI*2);
+  x.fillStyle='#fff';x.fill();
+  x.strokeStyle=trazo;x.lineWidth=2;x.stroke();
 }
 function escalaVisible(c,serie){
   let lo=Math.min(c.min,c.escala[0]), hi=Math.max(c.max,c.escala[1]);
@@ -569,7 +659,7 @@ function escalaVisible(c,serie){
   return [lo-m,hi+m];
 }
 
-/* ============ ingreso de lecturas ============ */
+/* ============ lecturas ============ */
 function registrar(id,valor,ts){
   const c=ch(id);
   S.datos[id].push({t:ts,v:valor});
@@ -590,8 +680,7 @@ function registrar(id,valor,ts){
     $('#ch-'+id).classList.add('alarm');
     const dir=valor>c.max?'alta':'baja';
     log('alarma',`${c.nombre} ${dir}: ${valor.toFixed(c.dec)} ${c.unidad} (límite ${valor>c.max?c.max:c.min})`);
-    beep(dir==='baja');
-    banner();
+    beep(dir==='baja');banner();
   }else if(!malo&&S.alarma[id]){
     S.alarma[id]=false;
     $('#ch-'+id).classList.remove('alarm');
@@ -606,26 +695,26 @@ function banner(){
   const b=$('#banner');
   if(act.length){
     b.classList.add('on');
-    b.textContent='Alerta activa — '+act.map(c=>c.nombre.toLowerCase()+' fuera de rango').join(' · ');
-  }else{b.classList.remove('on');b.textContent='';}
+    $('#bannerTxt').textContent='Alerta activa — '+act.map(c=>c.nombre.toLowerCase()+' fuera de rango').join(' · ');
+  }else{b.classList.remove('on');$('#bannerTxt').textContent='';}
 }
 
 /* ============ simulación ============ */
-const simEstado={};
-CH.forEach(c=>{simEstado[c.id]={v:c.base,drift:0};});
+const sim={};
+CH.forEach(c=>{sim[c.id]={v:c.base,drift:0};});
 function lecturaSim(c){
-  const e=simEstado[c.id];
+  const e=sim[c.id];
   e.drift+=(Math.random()-0.5)*c.paso*0.4;
   e.drift=Math.max(-c.paso*3,Math.min(c.paso*3,e.drift));
   e.v+=e.drift+(c.base-e.v)*0.03+(Math.random()-0.5)*c.paso;
-  if(Math.random()<0.004){e.drift+=(Math.random()<0.5?-1:1)*c.paso*5;}
+  if(Math.random()<0.004)e.drift+=(Math.random()<0.5?-1:1)*c.paso*5;
   return Math.round(e.v*100)/100;
 }
 function excursion(){
   const c=CH[Math.floor(Math.random()*CH.length)];
   const arriba=Math.random()<0.6;
-  simEstado[c.id].v=arriba?c.max+(c.max-c.min)*0.25+1:c.min-(c.max-c.min)*0.2-1;
-  simEstado[c.id].drift=0;
+  sim[c.id].v=arriba?c.max+(c.max-c.min)*0.25+1:c.min-(c.max-c.min)*0.2-1;
+  sim[c.id].drift=0;
   return c.nombre;
 }
 
@@ -634,7 +723,7 @@ async function lecturaSupabase(){
   const url=$('#supaUrl').value.trim().replace(/\/+$/,'');
   const key=$('#supaKey').value.trim();
   const dev=$('#supaDev').value.trim();
-  if(!url||!key){throw new Error('Falta la URL del proyecto o la anon key.');}
+  if(!url||!key)throw new Error('Falta la URL del proyecto o la anon key.');
   const q=`${url}/rest/v1/lecturas?device_id=eq.${encodeURIComponent(dev)}&order=ts.desc&limit=1`;
   const r=await fetch(q,{headers:{apikey:key,Authorization:'Bearer '+key}});
   if(!r.ok)throw new Error('Supabase respondió '+r.status+'. Revisa la tabla, las políticas RLS y la key.');
@@ -643,31 +732,48 @@ async function lecturaSupabase(){
   return j[0];
 }
 
+/* ============ esp32 en red local ============ */
+async function lecturaLocal(){
+  let ip=$('#espIp').value.trim();
+  if(!ip)throw new Error('Falta la dirección IP de la ESP32.');
+  if(!/^https?:\/\//i.test(ip))ip='http://'+ip;
+  const ctrl=new AbortController();
+  const corte=setTimeout(()=>ctrl.abort(),2500);
+  try{
+    const r=await fetch(ip.replace(/\/+$/,'')+'/datos',{signal:ctrl.signal,cache:'no-store'});
+    if(!r.ok)throw new Error('La ESP32 respondió '+r.status+'.');
+    return await r.json();
+  }catch(e){
+    if(e.name==='AbortError')throw new Error('No respondió en 2,5 s. Verifica que esté en la misma red.');
+    throw new Error(e.message+' Si la página está en https, el navegador bloquea el acceso a una IP local: ábrela desde el archivo descargado.');
+  }finally{clearTimeout(corte);}
+}
+
 /* ============ ciclo ============ */
 function tick(){
-  const ms=S.acumulado+(S.fase==='run'?Date.now()-S.t0:0);
-  $('#clock').textContent=hhmmss(ms);
+  $('#clock').textContent=hhmmss(S.acumulado+(S.fase==='run'?Date.now()-S.t0:0));
 }
 async function ciclo(){
   if(S.fase!=='run')return;
   const ts=Date.now();
   if(S.fuente==='sim'){
     CH.forEach(c=>registrar(c.id,lecturaSim(c),ts));
-  }else{
-    try{
-      const d=await lecturaSupabase();
-      $('#supaErr').textContent='';
-      CH.forEach(c=>{
-        const v=d[c.id]!==undefined?Number(d[c.id]):null;
-        if(v!==null&&!isNaN(v))registrar(c.id,v,ts);
-      });
-    }catch(e){
-      $('#supaErr').textContent='Sin conexión con Supabase: '+e.message;
-    }
+    return;
+  }
+  const errSel=S.fuente==='local'?'#espErr':'#supaErr';
+  try{
+    const d=S.fuente==='local'?await lecturaLocal():await lecturaSupabase();
+    $(errSel).textContent='';
+    CH.forEach(c=>{
+      const v=d[c.id]!==undefined&&d[c.id]!==null?Number(d[c.id]):null;
+      if(v!==null&&!isNaN(v))registrar(c.id,v,ts);
+    });
+  }catch(e){
+    $(errSel).textContent=e.message;
   }
 }
 
-/* ============ eventos / log ============ */
+/* ============ log ============ */
 function log(tipo,texto){
   const d=new Date();
   S.eventos.push({t:d,tipo:tipo,texto:texto});
@@ -680,12 +786,12 @@ function log(tipo,texto){
   c.prepend(el);
 }
 
-/* ============ controles de sesión ============ */
+/* ============ sesión ============ */
 function fase(f){
   S.fase=f;
-  const st=$('#state');
   const m={idle:['idle','En espera'],run:['run','En curso'],pause:['pause','En pausa'],end:['end','Finalizada']};
-  st.dataset.s=m[f][0];st.textContent=m[f][1];
+  $('#state').dataset.s=m[f][0];
+  $('#stateTxt').textContent=m[f][1];
   $('#clock').classList.toggle('paused',f!=='run');
   $('#btnStart').disabled=(f==='run'||f==='end');
   $('#btnStart').textContent=f==='pause'?'Reanudar':'Iniciar';
@@ -698,7 +804,7 @@ $('#btnStart').addEventListener('click',()=>{
   if(S.fase==='idle'){
     if(!$('#pNombre').value.trim()){$('#pNombre').focus();log('alarma','No se registró el nombre del paciente.');}
     S.inicio=new Date();log('inicio','Sesión iniciada. Fuente: '+(S.fuente==='sim'?'simulación':'Supabase'));
-  }else{log('inicio','Sesión reanudada.');}
+  }else log('inicio','Sesión reanudada.');
   S.t0=Date.now();fase('run');
   clearInterval(S.tickId);clearInterval(S.dataId);
   S.tickId=setInterval(tick,250);
@@ -707,24 +813,25 @@ $('#btnStart').addEventListener('click',()=>{
 });
 $('#btnPause').addEventListener('click',()=>{
   S.acumulado+=Date.now()-S.t0;
-  clearInterval(S.dataId);
-  fase('pause');log('pausa','Sesión en pausa. El contador y el registro se detuvieron.');
+  clearInterval(S.dataId);fase('pause');
+  log('pausa','Sesión en pausa. El contador y el registro se detuvieron.');
 });
 $('#btnEnd').addEventListener('click',()=>{
   if(S.fase==='run')S.acumulado+=Date.now()-S.t0;
   clearInterval(S.tickId);clearInterval(S.dataId);
   S.fin=new Date();fase('end');tick();
-  CH.forEach(c=>{S.alarma[c.id]=false;$('#ch-'+c.id).classList.remove('alarm');});
+  CH.forEach(c=>{S.alarma[c.id]=false;$('#ch-'+c.id).classList.remove('alarm');dibujar(c);});
   banner();log('fin','Sesión finalizada. Duración '+hhmmss(S.acumulado)+'.');
   resumen();
+  $('#summaryCard').scrollIntoView({behavior:'smooth',block:'nearest'});
 });
-$('#btnMute').addEventListener('click',()=>{
-  S.mute=!S.mute;
-  $('#btnMute').textContent=S.mute?'🔕':'🔔';
+function aplicarMute(){
+  $('#mIcon').setAttribute('d',S.mute?'M15.5 9.5l5 5M20.5 9.5l-5 5':'M16.5 9.4a4 4 0 010 5.2');
   $('#btnMute').title=S.mute?'Reactivar alarmas':'Silenciar alarmas';
-  guardar();
-});
-$('#btnMute').textContent=S.mute?'🔕':'🔔';
+  $('#btnMute').classList.toggle('on',S.mute);
+}
+$('#btnMute').addEventListener('click',()=>{S.mute=!S.mute;aplicarMute();guardar();});
+aplicarMute();
 $('#btnNote').addEventListener('click',()=>{
   const t=prompt('Nota para el registro:');
   if(t&&t.trim())log('nota',t.trim());
@@ -734,28 +841,35 @@ $('#btnTest').addEventListener('click',()=>{
   log('nota','Excursión forzada en '+excursion().toLowerCase()+'.');
 });
 
+/* rail */
+$('#rail').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-go]');if(!b)return;
+  $$('#rail button[data-go]').forEach(x=>x.classList.toggle('on',x===b));
+  const el=document.getElementById(b.dataset.go);
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+});
+
 /* ============ resumen ============ */
 function estadisticas(id){
   const vs=S.datos[id].map(p=>p.v);
   if(!vs.length)return null;
   const c=ch(id);
-  return{
-    min:Math.min.apply(null,vs),max:Math.max.apply(null,vs),
-    prom:vs.reduce((a,b)=>a+b,0)/vs.length,
-    n:vs.length,fuera:S.fuera[id],
-    pct:(S.fuera[id]/vs.length)*100,dec:c.dec,unidad:c.unidad,nombre:c.nombre
-  };
+  return{min:Math.min.apply(null,vs),max:Math.max.apply(null,vs),
+    prom:vs.reduce((a,b)=>a+b,0)/vs.length,n:vs.length,
+    fuera:S.fuera[id],pct:(S.fuera[id]/vs.length)*100,
+    dec:c.dec,unidad:c.unidad,nombre:c.nombre};
 }
 function resumen(){
-  const card=$('#summaryCard');card.style.display='block';
-  const filas=CH.map(c=>{
+  $('#summaryCard').style.display='block';
+  const cards=CH.map(c=>{
     const e=estadisticas(c.id);
-    if(!e)return `<div><small>${c.nombre}</small><b>--</b></div>`;
-    return `<div><small>${c.nombre}</small><b style="color:${c.color}">${e.prom.toFixed(e.dec)}<span style="font-size:11px;color:var(--ink-faint)"> ${c.unidad}</span></b>
-      <small>${e.min.toFixed(e.dec)} – ${e.max.toFixed(e.dec)} · fuera ${e.pct.toFixed(1)}%</small></div>`;
+    if(!e)return `<div class="s"><small>${c.nombre}</small><b>--</b></div>`;
+    return `<div class="s"><small>${c.nombre}</small>
+      <b style="color:${c.color}">${e.prom.toFixed(e.dec)}<span style="font-size:12px;color:var(--ink-3)"> ${c.unidad}</span></b>
+      <span class="d">${e.min.toFixed(e.dec)} – ${e.max.toFixed(e.dec)} · fuera ${e.pct.toFixed(1)}%</span></div>`;
   }).join('');
   const alarmas=S.eventos.filter(e=>e.tipo==='alarma').length;
-  $('#summary').innerHTML=`<div class="stat-grid">${filas}</div>
+  $('#summary').innerHTML=`<div class="stat-grid">${cards}</div>
     <p class="hint" style="margin:12px 0 0">Duración ${hhmmss(S.acumulado)} · ${S.datos.temp.length} lecturas por variable · ${alarmas} alertas registradas.</p>`;
 }
 
@@ -787,7 +901,7 @@ function picker(inputSel,resSel,buscar,elegir,limpiar){
       if(idx>=0&&items[idx])elegir(items[idx].valor);
       else if(inp.value.trim())elegir(inp.value.trim());
       if(limpiar)inp.value='';res.classList.remove('on');
-    }else if(e.key==='Escape'){res.classList.remove('on');}
+    }else if(e.key==='Escape')res.classList.remove('on');
   });
   res.addEventListener('mousedown',e=>{
     const d=e.target.closest('div[data-i]');if(!d)return;
@@ -797,13 +911,11 @@ function picker(inputSel,resSel,buscar,elegir,limpiar){
 }
 const coincide=(t,q)=>!q||t.toLowerCase().includes(q);
 
-/* procedimiento */
 picker('#procInput','#procRes',
   q=>CAT.procedimientos.filter(p=>coincide(p,q)).map(p=>({label:p,valor:p})),
   v=>{S.procedimiento=v;$('#procInput').value=v;},false);
 $('#procInput').addEventListener('change',()=>{S.procedimiento=$('#procInput').value.trim();});
 
-/* personal */
 picker('#persInput','#persRes',
   q=>CAT.personal.filter(p=>coincide(p.n+' '+p.r,q)).map(p=>({label:p.n,sub:p.r,valor:p})),
   v=>{
@@ -813,15 +925,15 @@ picker('#persInput','#persRes',
   },true);
 function pintarPersonal(){
   $('#cPers').textContent=S.personal.length;
-  $('#persChips').innerHTML=S.personal.map((p,i)=>
-    `<span class="chip"><b>${p.n}</b><small>${p.r}</small><button data-i="${i}" aria-label="Quitar">×</button></span>`).join('');
+  $('#persChips').innerHTML=S.personal.length
+    ? S.personal.map((p,i)=>`<span class="chip"><b>${p.n}</b><small>${p.r}</small><button data-i="${i}" aria-label="Quitar">×</button></span>`).join('')
+    : '<span class="empty-note">Nadie asignado todavía.</span>';
 }
 $('#persChips').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
   S.personal.splice(+b.dataset.i,1);pintarPersonal();
 });
 
-/* equipos */
 picker('#eqInput','#eqRes',
   q=>CAT.equipos.filter(x=>coincide([x.n,x.m,x.mo,x.s].join(' '),q))
       .map(x=>({label:x.n,sub:[x.m,x.mo,x.s].filter(Boolean).join(' · '),valor:x})),
@@ -832,8 +944,9 @@ picker('#eqInput','#eqRes',
   },true);
 function pintarEquipos(){
   $('#cEq').textContent=S.equipos.length;
-  $('#eqChips').innerHTML=S.equipos.map((x,i)=>
-    `<span class="chip"><b>${x.n}</b>${x.s?`<small>${x.s}</small>`:''}<button data-i="${i}" aria-label="Quitar">×</button></span>`).join('');
+  $('#eqChips').innerHTML=S.equipos.length
+    ? S.equipos.map((x,i)=>`<span class="chip"><b>${x.n}</b>${x.s?`<small>${x.s}</small>`:''}<button data-i="${i}" aria-label="Quitar">×</button></span>`).join('')
+    : '<span class="empty-note">Ningún equipo seleccionado.</span>';
 }
 $('#eqChips').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
@@ -844,24 +957,21 @@ $('#btnImportEq').addEventListener('click',()=>{
   if(!t)return;
   const nuevos=t.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{
     const p=l.split(/[,;\t]/).map(s=>s.trim());
-    return{n:p[0]||'Sin nombre',m:p[1]||'',mo:p[2]||'',s:p[3]||''};
-  }).filter(x=>x.n!=='Sin nombre'||x.s);
+    return{n:p[0]||'',m:p[1]||'',mo:p[2]||'',s:p[3]||''};
+  }).filter(x=>x.n);
   if(!nuevos.length){log('alarma','No se reconoció ninguna línea del inventario.');return;}
   CAT.equipos=nuevos.concat(CAT.equipos.filter(v=>!nuevos.some(n=>n.n===v.n&&n.s===v.s)));
   guardar();log('nota',`Inventario cargado: ${nuevos.length} equipos disponibles en el buscador.`);
 });
 
-/* insumos */
 picker('#insInput','#insRes',
   q=>CAT.insumos.filter(x=>coincide(x,q)).map(x=>({label:x,valor:x})),
-  v=>{
-    if(S.insumos.some(x=>x.n===v))return;
-    S.insumos.push({n:v,q:1});pintarInsumos();
-  },true);
+  v=>{if(S.insumos.some(x=>x.n===v))return;S.insumos.push({n:v,q:1});pintarInsumos();},true);
 function pintarInsumos(){
   $('#cIns').textContent=S.insumos.length;
-  $('#insChips').innerHTML=S.insumos.map((x,i)=>
-    `<span class="chip"><b>${x.n}</b><input class="qty" type="number" min="1" value="${x.q}" data-i="${i}" aria-label="Cantidad"><button data-i="${i}" aria-label="Quitar">×</button></span>`).join('');
+  $('#insChips').innerHTML=S.insumos.length
+    ? S.insumos.map((x,i)=>`<span class="chip"><b>${x.n}</b><input class="qty" type="number" min="1" value="${x.q}" data-i="${i}" aria-label="Cantidad"><button data-i="${i}" aria-label="Quitar">×</button></span>`).join('')
+    : '<span class="empty-note">Ningún insumo registrado.</span>';
 }
 $('#insChips').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
@@ -872,7 +982,7 @@ $('#insChips').addEventListener('input',e=>{
   S.insumos[+i.dataset.i].q=Math.max(1,+i.value||1);
 });
 
-/* pasos */
+/* ============ pasos ============ */
 function addStep(){
   const v=$('#stepInput').value.trim();if(!v)return;
   S.pasos.push({t:v,done:false,h:null});
@@ -882,28 +992,30 @@ $('#btnAddStep').addEventListener('click',addStep);
 $('#stepInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addStep();}});
 function pintarPasos(){
   $('#cSteps').textContent=S.pasos.filter(p=>p.done).length+'/'+S.pasos.length;
-  $('#stepList').innerHTML=S.pasos.map((p,i)=>`
-    <li class="${p.done?'done':''}">
-      <div class="txt">${p.t}${p.h?`<time>${p.h}</time>`:''}</div>
-      <div class="step-actions">
-        <button class="btn ghost" style="padding:2px 8px;font-size:12px" data-a="ok" data-i="${i}">${p.done?'↺':'✓'}</button>
-        <button class="btn ghost" style="padding:2px 8px;font-size:12px" data-a="del" data-i="${i}">×</button>
-      </div>
-    </li>`).join('');
+  $('#stepList').innerHTML=S.pasos.length
+    ? S.pasos.map((p,i)=>`
+      <li class="${p.done?'done':''}">
+        <div class="txt">${p.t}${p.h?`<time>${p.h}</time>`:''}</div>
+        <div class="step-actions">
+          <button class="btn ghost sm" data-a="ok" data-i="${i}">${p.done?'↺':'✓'}</button>
+          <button class="btn ghost sm" data-a="del" data-i="${i}">×</button>
+        </div>
+      </li>`).join('')
+    : '<li style="border:none"><span class="empty-note">Sin pasos definidos.</span></li>';
 }
 $('#stepList').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
   const i=+b.dataset.i,p=S.pasos[i];
-  if(b.dataset.a==='del'){S.pasos.splice(i,1);}
+  if(b.dataset.a==='del')S.pasos.splice(i,1);
   else{
     p.done=!p.done;
-    if(p.done){const d=new Date();p.h=hora(d);log('paso',`Paso completado: ${p.t}`);}
-    else{p.h=null;}
+    if(p.done){p.h=hora(new Date());log('paso',`Paso completado: ${p.t}`);}
+    else p.h=null;
   }
   pintarPasos();
 });
 
-/* umbrales */
+/* ============ umbrales ============ */
 function pintarUmbrales(){
   $('#thrList').innerHTML=CH.map(c=>`
     <div class="thr" style="--c:${c.color}">
@@ -918,106 +1030,102 @@ $('#thrList').addEventListener('input',e=>{
   refrescarRangos();dibujar(c);guardar();
 });
 
-/* fuente */
+/* ============ fuente ============ */
 $('#srcSeg').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
   $$('#srcSeg button').forEach(x=>x.classList.toggle('on',x===b));
   S.fuente=b.dataset.src;
+  $('#localCfg').style.display=S.fuente==='local'?'block':'none';
   $('#supaCfg').style.display=S.fuente==='supabase'?'block':'none';
-  $('#srcHint').textContent=S.fuente==='sim'
-    ?'Genera lecturas sintéticas cada segundo para probar alertas, gráficas y reporte sin hardware conectado.'
-    :'La ESP32 escribe en la tabla lecturas y esta vista consulta el último registro cada segundo.';
+  const textos={
+    sim:'Lecturas sintéticas cada segundo para probar alertas, gráficas y reporte sin hardware conectado.',
+    local:'Consulta http://IP/datos en la red local. Requiere abrir esta página desde el archivo descargado, no desde un enlace https.',
+    supabase:'La ESP32 escribe en la tabla lecturas y esta vista consulta el último registro cada segundo.'
+  };
+  $('#srcHint').textContent=textos[S.fuente];
 });
 
-/* ============ gráfica para el PDF ============ */
+/* ============ gráfica del PDF ============ */
 function graficaCompleta(c){
   const cv=$('#exportCanvas'),x=cv.getContext('2d');
-  const w=cv.width,h=cv.height,pad={l:70,r:20,t:34,b:38};
+  const w=cv.width,h=cv.height,pd={l:72,r:22,t:36,b:40};
   x.fillStyle='#FFFFFF';x.fillRect(0,0,w,h);
   const serie=S.datos[c.id];
   if(serie.length<2){
-    x.fillStyle='#888';x.font='22px sans-serif';
-    x.fillText('Sin datos suficientes',pad.l,h/2);
+    x.fillStyle='#999';x.font='22px sans-serif';
+    x.fillText('Sin datos suficientes',pd.l,h/2);
     return cv.toDataURL('image/png');
   }
   const vs=serie.map(p=>p.v);
   let lo=Math.min(c.min,Math.min.apply(null,vs)),hi=Math.max(c.max,Math.max.apply(null,vs));
   const m=(hi-lo)*0.1||1;lo-=m;hi+=m;
-  const X=i=>pad.l+(i/(serie.length-1))*(w-pad.l-pad.r);
-  const Y=v=>h-pad.b-((v-lo)/(hi-lo))*(h-pad.t-pad.b);
+  const X=i=>pd.l+(i/(serie.length-1))*(w-pd.l-pd.r);
+  const Y=v=>h-pd.b-((v-lo)/(hi-lo))*(h-pd.t-pd.b);
 
-  x.strokeStyle='#E2E8E8';x.lineWidth=1;x.fillStyle='#666';x.font='16px sans-serif';
+  x.strokeStyle='#E8EDEE';x.lineWidth=1;x.fillStyle='#8A9A9C';x.font='16px sans-serif';
   for(let i=0;i<=4;i++){
     const v=lo+((hi-lo)/4)*i,yy=Math.round(Y(v))+.5;
-    x.beginPath();x.moveTo(pad.l,yy);x.lineTo(w-pad.r,yy);x.stroke();
-    x.fillText(v.toFixed(c.dec),8,yy+5);
+    x.beginPath();x.moveTo(pd.l,yy);x.lineTo(w-pd.r,yy);x.stroke();
+    x.fillText(v.toFixed(c.dec),10,yy+5);
   }
-  x.fillStyle='rgba(60,160,110,.10)';
-  x.fillRect(pad.l,Y(c.max),w-pad.l-pad.r,Math.max(0,Y(c.min)-Y(c.max)));
-  x.strokeStyle='#C24A4A';x.setLineDash([8,6]);
-  [c.min,c.max].forEach(v=>{const yy=Math.round(Y(v))+.5;x.beginPath();x.moveTo(pad.l,yy);x.lineTo(w-pad.r,yy);x.stroke();});
+  x.fillStyle='rgba(15,158,142,.08)';
+  x.fillRect(pd.l,Y(c.max),w-pd.l-pd.r,Math.max(0,Y(c.min)-Y(c.max)));
+  x.strokeStyle='#D9808F';x.setLineDash([8,6]);
+  [c.min,c.max].forEach(v=>{const yy=Math.round(Y(v))+.5;x.beginPath();x.moveTo(pd.l,yy);x.lineTo(w-pd.r,yy);x.stroke();});
   x.setLineDash([]);
 
   x.beginPath();
   serie.forEach((p,i)=>{i?x.lineTo(X(i),Y(p.v)):x.moveTo(X(i),Y(p.v));});
-  x.strokeStyle='#14555C';x.lineWidth=2;x.lineJoin='round';x.stroke();
+  x.strokeStyle=c.color;x.lineWidth=2.2;x.lineJoin='round';x.stroke();
 
-  x.fillStyle='#14555C';x.font='600 20px sans-serif';
-  x.fillText(`${c.nombre} (${c.unidad})`,pad.l,22);
-  x.fillStyle='#777';x.font='15px sans-serif';
-  x.fillText(hora(new Date(serie[0].t)),pad.l,h-12);
+  x.fillStyle='#16292C';x.font='600 20px sans-serif';
+  x.fillText(`${c.nombre} (${c.unidad})`,pd.l,24);
+  x.fillStyle='#8A9A9C';x.font='15px sans-serif';
+  x.fillText(hora(new Date(serie[0].t)),pd.l,h-12);
   const fin=hora(new Date(serie[serie.length-1].t));
-  x.fillText(fin,w-pad.r-x.measureText(fin).width,h-12);
+  x.fillText(fin,w-pd.r-x.measureText(fin).width,h-12);
   return cv.toDataURL('image/png');
 }
 
-/* ============ reporte PDF ============ */
+/* ============ PDF ============ */
 $('#btnPdf').addEventListener('click',()=>{
-  try{generarPDF();}
-  catch(e){log('alarma','No se pudo generar el PDF: '+e.message);}
+  try{generarPDF();}catch(e){log('alarma','No se pudo generar el PDF: '+e.message);}
 });
-
 function generarPDF(){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:'pt',format:'letter'});
-  const W=doc.internal.pageSize.getWidth();
+  const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
   const M=48;let y=0;
-  const tinta=[20,85,92],gris=[110,120,120];
+  const tinta=[15,110,100],gris=[125,138,140];
 
-  const encabezado=()=>{
-    doc.setFillColor.apply(doc,tinta);doc.rect(0,0,W,68,'F');
-    doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(17);
-    doc.text('Reporte de sesión quirúrgica',M,32);
-    doc.setFont('helvetica','normal');doc.setFontSize(9.5);
-    doc.text('SIMQ · Monitoreo ambiental de sala de cirugía',M,48);
-    const cod='SIMQ-'+(S.inicio?S.inicio.getTime().toString(36).toUpperCase():'000');
-    doc.text(cod,W-M-doc.getTextWidth(cod),48);
-    doc.setTextColor(0,0,0);
-    return 96;
-  };
+  doc.setFillColor(15,158,142);doc.rect(0,0,W,70,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(17);
+  doc.text('Reporte de sesión quirúrgica',M,33);
+  doc.setFont('helvetica','normal');doc.setFontSize(9.5);
+  doc.text('SIMQ · Monitoreo ambiental de sala de cirugía',M,49);
+  const cod='SIMQ-'+(S.inicio?S.inicio.getTime().toString(36).toUpperCase():'000');
+  doc.text(cod,W-M-doc.getTextWidth(cod),49);
+  doc.setTextColor(0,0,0);y=98;
+
   const titulo=t=>{
-    if(y>doc.internal.pageSize.getHeight()-110){doc.addPage();y=M;}
+    if(y>H-110){doc.addPage();y=M;}
     doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor.apply(doc,tinta);
-    doc.text(t,M,y);doc.setDrawColor(215,225,225);doc.setLineWidth(.7);
+    doc.text(t,M,y);doc.setDrawColor(224,232,233);doc.setLineWidth(.7);
     doc.line(M,y+5,W-M,y+5);doc.setTextColor(0,0,0);y+=20;
   };
   const tabla=(head,body,anchos)=>{
     doc.autoTable({
       startY:y,margin:{left:M,right:M},head:[head],body:body.length?body:[head.map(()=>'—')],
       theme:'grid',
-      styles:{font:'helvetica',fontSize:9,cellPadding:5,lineColor:[222,230,230],lineWidth:.5,textColor:[35,45,45]},
-      headStyles:{fillColor:[236,242,242],textColor:tinta,fontStyle:'bold',lineWidth:.5},
-      alternateRowStyles:{fillColor:[250,252,252]},
+      styles:{font:'helvetica',fontSize:9,cellPadding:5,lineColor:[228,235,236],lineWidth:.5,textColor:[35,48,50]},
+      headStyles:{fillColor:[236,246,245],textColor:tinta,fontStyle:'bold',lineWidth:.5},
+      alternateRowStyles:{fillColor:[251,253,253]},
       columnStyles:anchos||{}
     });
     y=doc.lastAutoTable.finalY+22;
   };
 
-  y=encabezado();
-
-  /* identificación */
   titulo('Identificación');
-  const dur=hhmmss(S.acumulado);
   tabla(['Campo','Dato'],[
     ['Paciente',$('#pNombre').value||'—'],
     ['Documento',$('#pDoc').value||'—'],
@@ -1028,24 +1136,21 @@ function generarPDF(){
     ['Fecha',S.inicio?fecha(S.inicio):'—'],
     ['Hora de inicio',S.inicio?hora(S.inicio):'—'],
     ['Hora de finalización',S.fin?hora(S.fin):'—'],
-    ['Duración efectiva',dur],
+    ['Duración efectiva',hhmmss(S.acumulado)],
     ['Fuente de datos',S.fuente==='sim'?'Simulación':'ESP32 vía Supabase']
   ],{0:{cellWidth:150,fontStyle:'bold',textColor:gris}});
 
-  /* descripción */
   const desc=$('#procDesc').value.trim();
   if(desc){
     titulo('Descripción del procedimiento');
-    doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(35,45,45);
-    const lineas=doc.splitTextToSize(desc,W-M*2);
-    lineas.forEach(l=>{
-      if(y>doc.internal.pageSize.getHeight()-60){doc.addPage();y=M;}
+    doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(35,48,50);
+    doc.splitTextToSize(desc,W-M*2).forEach(l=>{
+      if(y>H-60){doc.addPage();y=M;}
       doc.text(l,M,y);y+=13;
     });
     y+=14;
   }
 
-  /* equipo humano */
   titulo('Personal asistencial');
   tabla(['Nombre','Rol'],S.personal.map(p=>[p.n,p.r]),{0:{cellWidth:260}});
 
@@ -1055,12 +1160,10 @@ function generarPDF(){
   titulo('Instrumentación e insumos');
   tabla(['Insumo','Cantidad'],S.insumos.map(x=>[x.n,String(x.q)]),{1:{cellWidth:80,halign:'center'}});
 
-  /* pasos */
   titulo('Desarrollo paso a paso');
   tabla(['#','Paso','Hora','Estado'],S.pasos.map((p,i)=>[String(i+1),p.t,p.h||'—',p.done?'Completado':'Pendiente']),
     {0:{cellWidth:28,halign:'center'},2:{cellWidth:62,halign:'center'},3:{cellWidth:86,halign:'center'}});
 
-  /* ambiente */
   doc.addPage();y=M;
   titulo('Condiciones ambientales');
   tabla(['Variable','Mín','Prom','Máx','Rango admitido','Tiempo fuera'],
@@ -1072,41 +1175,34 @@ function generarPDF(){
     }),
     {1:{halign:'center'},2:{halign:'center'},3:{halign:'center'},4:{halign:'center'},5:{halign:'center'}});
 
-  /* gráficas */
   CH.forEach(c=>{
     const alto=112;
-    if(y>doc.internal.pageSize.getHeight()-alto-50){doc.addPage();y=M;}
+    if(y>H-alto-50){doc.addPage();y=M;}
     doc.addImage(graficaCompleta(c),'PNG',M,y,W-M*2,alto);
     y+=alto+18;
   });
 
-  /* alertas */
   doc.addPage();y=M;
   titulo('Registro de alertas y eventos');
-  tabla(['Hora','Tipo','Detalle'],
-    S.eventos.slice().map(e=>[hora(e.t),e.tipo,e.texto]),
+  tabla(['Hora','Tipo','Detalle'],S.eventos.map(e=>[hora(e.t),e.tipo,e.texto]),
     {0:{cellWidth:56},1:{cellWidth:66}});
 
-  /* firmas */
-  if(y>doc.internal.pageSize.getHeight()-130){doc.addPage();y=M;}
-  y+=24;doc.setDrawColor(150,160,160);doc.setLineWidth(.6);
-  const anchoF=(W-M*2-40)/2;
+  if(y>H-130){doc.addPage();y=M;}
+  y+=24;doc.setDrawColor(160,172,174);doc.setLineWidth(.6);
+  const af=(W-M*2-40)/2;
   [0,1].forEach(i=>{
-    const x0=M+i*(anchoF+40);
-    doc.line(x0,y,x0+anchoF,y);
+    const x0=M+i*(af+40);
+    doc.line(x0,y,x0+af,y);
     doc.setFontSize(8.5);doc.setTextColor.apply(doc,gris);
     doc.text(i?'Ingeniero biomédico responsable':'Cirujano responsable',x0,y+13);
   });
 
-  /* pies */
   const total=doc.internal.getNumberOfPages();
   for(let i=1;i<=total;i++){
-    doc.setPage(i);
-    doc.setFontSize(8);doc.setTextColor(150,160,160);
-    const pie=`Generado el ${fecha(new Date())} a las ${hora(new Date())} · Documento con datos personales sensibles (Ley 1581 de 2012)`;
-    doc.text(pie,M,doc.internal.pageSize.getHeight()-24);
+    doc.setPage(i);doc.setFontSize(8);doc.setTextColor(160,172,174);
+    doc.text(`Generado el ${fecha(new Date())} a las ${hora(new Date())} · Documento con datos personales sensibles (Ley 1581 de 2012)`,M,H-24);
     const pg=`${i} / ${total}`;
-    doc.text(pg,W-M-doc.getTextWidth(pg),doc.internal.pageSize.getHeight()-24);
+    doc.text(pg,W-M-doc.getTextWidth(pg),H-24);
   }
 
   const nom=($('#pNombre').value||'paciente').replace(/[^\wáéíóúñÁÉÍÓÚÑ ]/g,'').trim().replace(/\s+/g,'_');
