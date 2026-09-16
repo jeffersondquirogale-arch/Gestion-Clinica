@@ -90,61 +90,55 @@ button.icon{padding:8px 10px;}
 #banner.on{display:block;animation:pulse 1.1s ease-in-out infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.68}}
 
-/* ---------- layout ---------- */
+/* ---------- tablero ---------- */
 main{
-  display:grid;grid-template-columns:minmax(0,1fr) 400px;
-  gap:14px;padding:14px;max-width:1680px;margin:0 auto;align-items:start;
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;padding:10px;max-width:2000px;margin:0 auto;align-items:start;
 }
-@media (max-width:1080px){main{grid-template-columns:1fr;}}
+.full{grid-column:1/-1;}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0;}
+@media (max-width:1440px){main{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:760px){main{grid-template-columns:1fr;}}
 
-/* ---------- channels ---------- */
-.channels{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+/* ---------- canales ---------- */
+.channels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+@media (max-width:1440px){.channels{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media (max-width:620px){.channels{grid-template-columns:1fr;}}
 .ch{
   background:var(--panel);border:1px solid var(--line);
   border-left:3px solid var(--c);border-radius:var(--radius);
-  padding:12px 14px 6px;position:relative;overflow:hidden;
+  padding:11px 13px 4px;position:relative;overflow:hidden;
 }
 .ch.alarm{border-color:var(--alarm);border-left-color:var(--alarm);background:#2A1418;animation:pulse 1.1s ease-in-out infinite;}
 .ch-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
-.ch-name{font-size:13px;color:var(--ink-dim);font-weight:500;}
-.ch-range{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-top:2px;}
+.ch-name{font-size:12.5px;color:var(--ink-dim);font-weight:500;}
+.ch-range{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin-top:2px;}
 .ch-val{
   font-family:var(--mono);font-variant-numeric:tabular-nums;
-  font-size:44px;font-weight:500;line-height:1;color:var(--c);
-  display:flex;align-items:baseline;gap:5px;
+  font-size:38px;font-weight:500;line-height:1;color:var(--c);
+  display:flex;align-items:baseline;gap:4px;
 }
 .ch.alarm .ch-val,.ch.alarm .ch-name{color:var(--alarm);}
-.ch-unit{font-size:15px;color:var(--ink-dim);font-weight:400;}
-.ch canvas{display:block;width:100%;height:92px;margin-top:8px;}
-.ch-foot{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);padding:2px 0 6px;}
+.ch-unit{font-size:14px;color:var(--ink-dim);font-weight:400;}
+.ch canvas{display:block;width:100%;height:84px;margin-top:7px;}
+.ch-foot{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--ink-faint);padding:2px 0 5px;}
 
-/* ---------- panels ---------- */
+/* ---------- paneles ---------- */
 .card{
   background:var(--panel);border:1px solid var(--line);
-  border-radius:var(--radius);margin-top:12px;
+  border-radius:var(--radius);display:flex;flex-direction:column;min-width:0;
 }
 .card>h2{
-  margin:0;font-size:12.5px;font-weight:600;color:var(--ink-dim);
-  padding:11px 14px;border-bottom:1px solid var(--line);
-  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  margin:0;font-size:12px;font-weight:600;color:var(--ink-dim);
+  padding:9px 12px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:8px;
 }
-.card .body{padding:14px;}
-.side{display:flex;flex-direction:column;}
-.side .card{margin-top:0;margin-bottom:12px;}
-details.sec{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);margin-bottom:10px;}
-details.sec>summary{
-  padding:11px 14px;cursor:pointer;font-weight:600;font-size:12.5px;
-  color:var(--ink-dim);list-style:none;display:flex;justify-content:space-between;align-items:center;
-}
-details.sec>summary::-webkit-details-marker{display:none;}
-details.sec>summary::after{content:'+';font-family:var(--mono);color:var(--ink-faint);font-size:15px;}
-details.sec[open]>summary::after{content:'–';}
-details.sec[open]>summary{border-bottom:1px solid var(--line);}
-details.sec .body{padding:14px;}
+.card>h2 .sp{margin-left:auto;}
+.card .body{padding:12px;}
+.card .body.scroll{max-height:230px;overflow:auto;}
 .count{
-  font-family:var(--mono);font-size:11px;color:var(--ink-faint);
-  border:1px solid var(--line);border-radius:100px;padding:1px 7px;margin-left:auto;margin-right:8px;
+  font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);
+  border:1px solid var(--line);border-radius:100px;padding:1px 7px;margin-left:auto;
 }
 
 /* ---------- forms ---------- */
@@ -249,23 +243,11 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--ok);display:b
 <div id="banner" role="status"></div>
 
 <main>
-  <section>
-    <div class="channels" id="channels"></div>
+  <div class="channels full" id="channels"></div>
 
-    <div class="card">
-      <h2>Registro de eventos <button class="btn ghost" id="btnNote" style="padding:4px 10px;font-size:12px">Añadir nota</button></h2>
-      <div id="log"><div class="empty">Los eventos aparecen aquí al iniciar la sesión.</div></div>
-    </div>
-
-    <div class="card" id="summaryCard" style="display:none">
-      <h2>Resumen de la sesión</h2>
-      <div class="body" id="summary"></div>
-    </div>
-  </section>
-
-  <aside class="side">
-    <details class="sec" open>
-      <summary>Paciente</summary>
+  <div class="col">
+    <section class="card">
+      <h2>Paciente</h2>
       <div class="body">
         <label class="f"><span>Nombre completo</span><input type="text" id="pNombre" autocomplete="off"></label>
         <div class="row2">
@@ -278,25 +260,27 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--ok);display:b
           </label>
           <label class="f"><span>Quirófano</span><input type="text" id="pSala" placeholder="Sala 3"></label>
         </div>
-        <label class="f"><span>Diagnóstico</span><input type="text" id="pDx" autocomplete="off"></label>
+        <label class="f" style="margin-bottom:0"><span>Diagnóstico</span><input type="text" id="pDx" autocomplete="off"></label>
       </div>
-    </details>
+    </section>
 
-    <details class="sec" open>
-      <summary>Procedimiento</summary>
+    <section class="card">
+      <h2>Procedimiento</h2>
       <div class="body">
-        <label class="f"><span>Nombre del procedimiento</span>
+        <label class="f"><span>Nombre</span>
           <div class="picker">
             <input type="text" id="procInput" autocomplete="off" placeholder="Buscar o escribir…">
             <div class="results" id="procRes"></div>
           </div>
         </label>
-        <label class="f"><span>Descripción</span><textarea id="procDesc" placeholder="Hallazgos, técnica, observaciones relevantes."></textarea></label>
+        <label class="f" style="margin-bottom:0"><span>Descripción</span><textarea id="procDesc" placeholder="Hallazgos, técnica, observaciones relevantes."></textarea></label>
       </div>
-    </details>
+    </section>
+  </div>
 
-    <details class="sec">
-      <summary>Personal asistencial <span class="count" id="cPers">0</span></summary>
+  <div class="col">
+    <section class="card">
+      <h2>Personal asistencial <span class="count" id="cPers">0</span></h2>
       <div class="body">
         <div class="picker">
           <input type="text" id="persInput" autocomplete="off" placeholder="Buscar por nombre o rol…">
@@ -304,10 +288,10 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--ok);display:b
         </div>
         <div class="chips" id="persChips"></div>
       </div>
-    </details>
+    </section>
 
-    <details class="sec">
-      <summary>Equipos biomédicos <span class="count" id="cEq">0</span></summary>
+    <section class="card">
+      <h2>Equipos biomédicos <span class="count" id="cEq">0</span></h2>
       <div class="body">
         <div class="picker">
           <input type="text" id="eqInput" autocomplete="off" placeholder="Buscar en el inventario…">
@@ -318,10 +302,12 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--ok);display:b
           <button class="btn ghost" id="btnImportEq" style="padding:5px 11px;font-size:12px">Cargar inventario</button>
         </div>
       </div>
-    </details>
+    </section>
+  </div>
 
-    <details class="sec">
-      <summary>Instrumentación e insumos <span class="count" id="cIns">0</span></summary>
+  <div class="col">
+    <section class="card">
+      <h2>Instrumentación e insumos <span class="count" id="cIns">0</span></h2>
       <div class="body">
         <div class="picker">
           <input type="text" id="insInput" autocomplete="off" placeholder="Buscar insumo o instrumental…">
@@ -329,31 +315,37 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--ok);display:b
         </div>
         <div class="chips" id="insChips"></div>
       </div>
-    </details>
+    </section>
 
-    <details class="sec">
-      <summary>Paso a paso <span class="count" id="cSteps">0</span></summary>
+    <section class="card">
+      <h2>Paso a paso <span class="count" id="cSteps">0</span></h2>
       <div class="body">
         <div style="display:flex;gap:8px">
           <input type="text" id="stepInput" placeholder="Describir el paso…" autocomplete="off">
           <button class="btn" id="btnAddStep">Añadir</button>
         </div>
-        <ol class="steps" id="stepList" style="margin-top:12px"></ol>
+        <ol class="steps" id="stepList" style="margin-top:10px"></ol>
       </div>
-    </details>
+    </section>
+  </div>
 
-    <details class="sec">
-      <summary>Umbrales de alerta</summary>
+  <div class="col">
+    <section class="card">
+      <h2>Registro de eventos <button class="btn ghost sp" id="btnNote" style="padding:3px 9px;font-size:11.5px">Añadir nota</button></h2>
+      <div id="log"><div class="empty">Los eventos aparecen aquí al iniciar la sesión.</div></div>
+    </section>
+
+    <section class="card">
+      <h2>Umbrales de alerta <button class="btn ghost sp" id="btnTest" style="padding:3px 9px;font-size:11.5px">Probar</button></h2>
       <div class="body">
         <div class="thr-head"><span>Variable</span><span>Mín</span><span>Máx</span></div>
         <div id="thrList"></div>
-        <p class="hint">Valores de arranque según referencia de ambiente quirúrgico. Ajústalos contra la Resolución 3100 de 2019 y ASHRAE 170 antes de usarlos como criterio formal.</p>
-        <div class="toolbar"><button class="btn ghost" id="btnTest" style="padding:5px 11px;font-size:12px">Simular excursión</button></div>
+        <p class="hint" style="margin:8px 0 0">Contrastar con la Resolución 3100 de 2019 y ASHRAE 170 antes de usarlos como criterio formal.</p>
       </div>
-    </details>
+    </section>
 
-    <details class="sec">
-      <summary>Fuente de datos</summary>
+    <section class="card">
+      <h2>Fuente de datos</h2>
       <div class="body">
         <div class="seg" id="srcSeg">
           <button data-src="sim" class="on">Simulación</button>
@@ -362,22 +354,26 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--ok);display:b
         <div id="supaCfg" style="display:none;margin-top:12px">
           <label class="f"><span>URL del proyecto</span><input type="text" id="supaUrl" placeholder="https://xxxx.supabase.co"></label>
           <label class="f"><span>Anon key</span><input type="text" id="supaKey" placeholder="eyJhbGciOi…"></label>
-          <label class="f"><span>ID del dispositivo</span><input type="text" id="supaDev" value="esp32-quirofano-01"></label>
-          <p class="hint">Consulta <code>GET /rest/v1/lecturas</code> ordenado por <code>ts</code> descendente, filtrado por <code>device_id</code>, cada segundo.</p>
+          <label class="f" style="margin-bottom:0"><span>ID del dispositivo</span><input type="text" id="supaDev" value="esp32-quirofano-01"></label>
           <div class="err" id="supaErr"></div>
         </div>
-        <p class="hint" style="margin-top:12px" id="srcHint">Genera lecturas sintéticas cada segundo para probar alertas, gráficas y reporte sin hardware conectado.</p>
+        <p class="hint" style="margin:10px 0 0" id="srcHint">Genera lecturas sintéticas cada segundo para probar alertas, gráficas y reporte sin hardware conectado.</p>
       </div>
-    </details>
+    </section>
 
-    <div class="card">
+    <section class="card">
       <h2>Reporte</h2>
       <div class="body">
         <button class="btn primary" id="btnPdf" disabled style="width:100%">Descargar reporte en PDF</button>
-        <p class="hint" style="margin-top:10px">Se habilita al finalizar la sesión. Incluye datos del paciente, tiempos, personal, equipos, insumos, paso a paso, estadísticas ambientales, gráficas y el log completo de alertas.</p>
+        <p class="hint" style="margin:10px 0 0">Se habilita al finalizar la sesión.</p>
       </div>
-    </div>
-  </aside>
+    </section>
+  </div>
+
+  <section class="card full" id="summaryCard" style="display:none">
+    <h2>Resumen de la sesión</h2>
+    <div class="body" id="summary"></div>
+  </section>
 </main>
 
 <canvas id="exportCanvas" width="1400" height="360" style="display:none"></canvas>
