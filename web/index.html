@@ -424,21 +424,21 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
             <h2>Fuente de datos</h2>
             <div class="body">
               <div class="seg" id="srcSeg">
-                <button data-src="sim" class="on">Simulación</button>
+                <button data-src="supabase" class="on">Supabase</button>
                 <button data-src="local">ESP32</button>
-                <button data-src="supabase">Supabase</button>
+                <button data-src="sim">Simulación</button>
               </div>
               <div id="localCfg" style="display:none;margin-top:13px">
                 <label class="f" style="margin:0"><span>Dirección IP de la ESP32</span><input type="text" id="espIp" placeholder="192.168.1.45"></label>
                 <div class="err" id="espErr"></div>
               </div>
-              <div id="supaCfg" style="display:none;margin-top:13px">
-                <label class="f"><span>URL del proyecto</span><input type="text" id="supaUrl" placeholder="https://xxxx.supabase.co"></label>
-                <label class="f"><span>Anon key</span><input type="text" id="supaKey" placeholder="eyJhbGciOi…"></label>
+              <div id="supaCfg" style="margin-top:13px">
+                <label class="f"><span>URL del proyecto</span><input type="text" id="supaUrl" value="https://vpdtereegwgifeeomtsx.supabase.co"></label>
+                <label class="f"><span>Clave publishable</span><input type="text" id="supaKey" value="sb_publishable_mWh5yJUPuomCYHLY2Q-ezw_wHVadiIh"></label>
                 <label class="f" style="margin:0"><span>ID del dispositivo</span><input type="text" id="supaDev" value="esp32-quirofano-01"></label>
                 <div class="err" id="supaErr"></div>
               </div>
-              <p class="hint" style="margin:11px 0 0" id="srcHint">Lecturas sintéticas cada segundo para probar alertas, gráficas y reporte sin hardware conectado.</p>
+              <p class="hint" style="margin:11px 0 0" id="srcHint">La ESP32 escribe en las tablas ambiente, luz y sonido. Esta vista consulta el último registro de cada una.</p>
             </div>
           </section>
 
@@ -523,7 +523,7 @@ const S = {
   inicio:null, fin:null,
   datos:{}, fuera:{}, alarma:{}, streak:{},
   personal:[], equipos:[], insumos:[], pasos:[], eventos:[],
-  procedimiento:'', mute:false, fuente:'sim', ultimoBeep:0
+  procedimiento:'', mute:false, fuente:'supabase', ultimoBeep:0
 };
 CH.forEach(c=>{S.datos[c.id]=[];S.fuera[c.id]=0;S.alarma[c.id]=false;S.streak[c.id]=0;});
 
