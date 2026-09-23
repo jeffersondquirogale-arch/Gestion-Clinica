@@ -719,17 +719,33 @@ function excursion(){
 }
 
 /* ============ supabase ============ */
+async function ultimaFila(base,key,tabla,dev){
+  const q=`${base}/rest/v1/${tabla}?device_id=eq.${encodeURIComponent(dev)}&order=ts.desc&limit=1`;
+  const r=await fetch(q,{headers:{apikey:key,Authorization:'Bearer '+key},cache:'no-store'});
+  if(!r.ok)throw new Error(`Tabla ${tabla}: respondió ${r.status}.`);
+  const j=await r.json();
+  return j.length?j[0]:null;
+}
 async function lecturaSupabase(){
-  const url=$('#supaUrl').value.trim().replace(/\/+$/,'');
+  const base=$('#supaUrl').value.trim().replace(/\/+$/,'');
   const key=$('#supaKey').value.trim();
   const dev=$('#supaDev').value.trim();
-  if(!url||!key)throw new Error('Falta la URL del proyecto o la anon key.');
-  const q=`${url}/rest/v1/lecturas?device_id=eq.${encodeURIComponent(dev)}&order=ts.desc&limit=1`;
-  const r=await fetch(q,{headers:{apikey:key,Authorization:'Bearer '+key}});
-  if(!r.ok)throw new Error('Supabase respondió '+r.status+'. Revisa la tabla, las políticas RLS y la key.');
-  const j=await r.json();
-  if(!j.length)throw new Error('La tabla no tiene lecturas para ese device_id.');
-  return j[0];
+  if(!base||!key)throw new Error('Falta la URL del proyecto o la clave.');
+
+  const [amb,luz,son]=await Promise.all([
+    ultimaFila(base,key,'ambiente',dev),
+    ultimaFila(base,key,'luz',dev),
+    ultimaFila(base,key,'sonido',dev)
+  ]);
+
+  if(!amb&&!luz&&!son)throw new Error('No hay filas para el device_id "'+dev+'".');
+
+  return {
+    temp : amb?amb.temp:null,
+    hum  : amb?amb.hum :null,
+    lux  : luz?luz.lux :null,
+    ruido: son?son.db  :null
+  };
 }
 
 /* ============ esp32 en red local ============ */
@@ -1040,7 +1056,7 @@ $('#srcSeg').addEventListener('click',e=>{
   const textos={
     sim:'Lecturas sintéticas cada segundo para probar alertas, gráficas y reporte sin hardware conectado.',
     local:'Consulta http://IP/datos en la red local. Requiere abrir esta página desde el archivo descargado, no desde un enlace https.',
-    supabase:'La ESP32 escribe en la tabla lecturas y esta vista consulta el último registro cada segundo.'
+    supabase:'La ESP32 escribe en las tablas ambiente, luz y sonido. Esta vista consulta el último registro de cada una.'
   };
   $('#srcHint').textContent=textos[S.fuente];
 });
