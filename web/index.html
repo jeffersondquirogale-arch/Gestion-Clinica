@@ -152,7 +152,7 @@ main{padding:20px 22px 40px;max-width:1900px;margin:0 auto;}
   background:var(--line-soft);color:var(--ink-2);border-radius:100px;padding:2px 9px;margin-top:7px;
 }
 .ch.alarm .ch-range{background:var(--alarm-soft);color:#A02A3C;}
-.ch canvas{display:block;width:100%;height:76px;margin-top:10px;}
+.ch canvas{display:block;width:100%;height:132px;margin-top:10px;}
 .ch-foot{
   display:flex;justify-content:space-between;font-family:var(--mono);
   font-size:10.5px;color:var(--ink-3);border-top:1px solid var(--line-soft);
@@ -254,6 +254,19 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
 .dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none;}
 .thr input{font-family:var(--mono);text-align:center;padding:6px 4px;}
 
+/* ===== pestañas ===== */
+.tabs{
+  display:flex;gap:2px;padding:0 22px;background:var(--card);
+  border-bottom:1px solid var(--line);
+}
+.tabs button{
+  background:none;border:none;cursor:pointer;padding:13px 4px 11px;margin-right:22px;
+  font-size:13.5px;font-weight:500;color:var(--ink-3);
+  border-bottom:2px solid transparent;transition:color .13s,border-color .13s;
+}
+.tabs button:hover{color:var(--ink-2);}
+.tabs button.on{color:var(--accent);border-bottom-color:var(--accent);}
+
 /* ===== dispositivo ===== */
 .devpill{
   margin-left:auto;display:inline-flex;align-items:center;gap:7px;
@@ -294,13 +307,10 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
 </head>
 <body>
 
-<nav id="rail" aria-label="Secciones">
+<nav id="rail" aria-label="Vistas">
   <div class="mark">SQ</div>
-  <button data-go="secMonitor" class="on" title="Dispositivo" aria-label="Dispositivo"><svg viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="12" rx="2"/><path d="M8 20h8M12 15.5V20"/></svg></button>
-  <button data-go="secAmb" title="Ambiente" aria-label="Ambiente"><svg viewBox="0 0 24 24"><path d="M3 15l4-5 4 4 4-7 6 8"/></svg></button>
-  <button data-go="secPac" title="Paciente" aria-label="Paciente"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6"/></svg></button>
-  <button data-go="secEq" title="Equipos e insumos" aria-label="Equipos e insumos"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="13" rx="2"/><path d="M8 21h8M12 17.5V21"/></svg></button>
-  <button data-go="secOp" title="Eventos y umbrales" aria-label="Eventos y umbrales"><svg viewBox="0 0 24 24"><path d="M12 4.5v3M12 16.5v3M4.5 12h3M16.5 12h3"/><circle cx="12" cy="12" r="4"/></svg></button>
+  <button data-v="mon" class="on" title="Monitoreo" aria-label="Monitoreo"><svg viewBox="0 0 24 24"><path d="M3 15l4-5 4 4 4-7 6 8"/></svg></button>
+  <button data-v="ses" title="Sesión" aria-label="Sesión"><svg viewBox="0 0 24 24"><rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg></button>
   <div class="spacer"></div>
   <button id="btnMute" title="Silenciar alarmas" aria-label="Silenciar alarmas"><svg viewBox="0 0 24 24"><path d="M6 9.5h3l4-3.2v11.4l-4-3.2H6z"/><path id="mIcon" d="M16.5 9.4a4 4 0 010 5.2"/></svg></button>
 </nav>
@@ -323,175 +333,189 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
 
   <div id="banner" role="status"><i class="led"></i><span id="bannerTxt"></span></div>
 
+  <nav class="tabs" id="tabs">
+    <button data-v="mon" class="on">Monitoreo</button>
+    <button data-v="ses">Sesión y reporte</button>
+  </nav>
+
   <main>
-    <section class="block" id="secMonitor">
-      <p class="eyebrow">Dispositivo</p>
-      <div class="card">
-        <h2>Monitoreo continuo <span class="devpill" id="devPill" data-s="espera"><i class="led"></i><span id="devTxt">Esperando datos</span></span></h2>
-        <p class="sub">La consulta corre siempre, haya sesión abierta o no. El cronómetro solo delimita qué tramo entra al reporte.</p>
-        <div class="body">
-          <div class="dev-grid" id="devGrid"></div>
+    <!-- ===================== VISTA MONITOREO ===================== -->
+    <div id="viewMon">
+      <section class="block">
+        <p class="eyebrow">Dispositivo</p>
+        <div class="card">
+          <h2>Monitoreo continuo <span class="devpill" id="devPill" data-s="espera"><i class="led"></i><span id="devTxt">Esperando datos</span></span></h2>
+          <p class="sub">Corre siempre, haya sesión abierta o no. El cronómetro solo delimita qué tramo entra al reporte.</p>
+          <div class="body">
+            <div class="dev-grid" id="devGrid"></div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="block" id="secAmb">
-      <p class="eyebrow">Condiciones ambientales</p>
-      <div class="grid" id="channels"></div>
-    </section>
+      <section class="block">
+        <p class="eyebrow">Condiciones ambientales</p>
+        <div class="grid" id="channels"></div>
+      </section>
 
-    <section class="block" id="secPac">
-      <p class="eyebrow">Sesión</p>
-      <div class="grid">
-        <div class="col">
-          <section class="card">
-            <h2>Paciente</h2>
-            <div class="body">
-              <label class="f"><span>Nombre completo</span><input type="text" id="pNombre" autocomplete="off"></label>
-              <div class="row2">
-                <label class="f"><span>Documento</span><input type="text" id="pDoc" autocomplete="off"></label>
-                <label class="f"><span>Edad</span><input type="number" id="pEdad" min="0" max="120"></label>
-              </div>
-              <div class="row2">
-                <label class="f"><span>Sexo</span>
-                  <select id="pSexo"><option value="">—</option><option>Femenino</option><option>Masculino</option><option>Otro</option></select>
-                </label>
-                <label class="f"><span>Quirófano</span><input type="text" id="pSala" placeholder="Sala 3"></label>
-              </div>
-              <label class="f" style="margin:0"><span>Diagnóstico</span><input type="text" id="pDx" autocomplete="off"></label>
-            </div>
-          </section>
+      <section class="block">
+        <p class="eyebrow">Eventos</p>
+        <div class="card">
+          <h2>Registro <button class="btn ghost sm sp" id="btnNote">Añadir nota</button></h2>
+          <div id="log"><div class="empty">Aquí quedan las alertas, los pasos completados y las caídas del dispositivo.</div></div>
         </div>
+      </section>
+    </div>
 
-        <div class="col">
-          <section class="card">
-            <h2>Procedimiento</h2>
-            <div class="body">
-              <label class="f"><span>Nombre</span>
-                <div class="picker">
-                  <input type="text" id="procInput" autocomplete="off" placeholder="Buscar o escribir…">
-                  <div class="results" id="procRes"></div>
+    <!-- ===================== VISTA SESIÓN ===================== -->
+    <div id="viewSes" hidden>
+      <section class="block">
+        <p class="eyebrow">Datos de la sesión</p>
+        <div class="grid">
+          <div class="col">
+            <section class="card">
+              <h2>Paciente</h2>
+              <div class="body">
+                <label class="f"><span>Nombre completo</span><input type="text" id="pNombre" autocomplete="off"></label>
+                <div class="row2">
+                  <label class="f"><span>Documento</span><input type="text" id="pDoc" autocomplete="off"></label>
+                  <label class="f"><span>Edad</span><input type="number" id="pEdad" min="0" max="120"></label>
                 </div>
-              </label>
-              <label class="f" style="margin:0"><span>Descripción</span><textarea id="procDesc" placeholder="Hallazgos, técnica, observaciones relevantes."></textarea></label>
-            </div>
-          </section>
-        </div>
-
-        <div class="col">
-          <section class="card">
-            <h2>Personal asistencial <span class="count" id="cPers">0</span></h2>
-            <p class="sub">Quién entra a la sala y con qué rol.</p>
-            <div class="body">
-              <div class="picker">
-                <input type="text" id="persInput" autocomplete="off" placeholder="Buscar por nombre o rol…">
-                <div class="results" id="persRes"></div>
+                <div class="row2">
+                  <label class="f"><span>Sexo</span>
+                    <select id="pSexo"><option value="">—</option><option>Femenino</option><option>Masculino</option><option>Otro</option></select>
+                  </label>
+                  <label class="f"><span>Quirófano</span><input type="text" id="pSala" placeholder="Sala 3"></label>
+                </div>
+                <label class="f" style="margin:0"><span>Diagnóstico</span><input type="text" id="pDx" autocomplete="off"></label>
               </div>
-              <div class="chips" id="persChips"></div>
-            </div>
-          </section>
-        </div>
+            </section>
+          </div>
 
-        <div class="col">
-          <section class="card" id="secOp">
-            <h2>Paso a paso <span class="count" id="cSteps">0</span></h2>
-            <p class="sub">Cada paso queda con su hora al marcarlo.</p>
-            <div class="body">
-              <div style="display:flex;gap:8px">
-                <input type="text" id="stepInput" placeholder="Describir el paso…" autocomplete="off">
-                <button class="btn" id="btnAddStep">Añadir</button>
+          <div class="col">
+            <section class="card">
+              <h2>Procedimiento</h2>
+              <div class="body">
+                <label class="f"><span>Nombre</span>
+                  <div class="picker">
+                    <input type="text" id="procInput" autocomplete="off" placeholder="Buscar o escribir…">
+                    <div class="results" id="procRes"></div>
+                  </div>
+                </label>
+                <label class="f" style="margin:0"><span>Descripción</span><textarea id="procDesc" placeholder="Hallazgos, técnica, observaciones relevantes."></textarea></label>
               </div>
-              <ol class="steps" id="stepList" style="margin-top:6px"></ol>
-            </div>
-          </section>
-        </div>
-      </div>
-    </section>
+            </section>
+          </div>
 
-    <section class="block" id="secEq">
-      <p class="eyebrow">Recursos y operación</p>
-      <div class="grid">
-        <div class="col">
-          <section class="card">
-            <h2>Equipos biomédicos <span class="count" id="cEq">0</span></h2>
-            <div class="body">
-              <div class="picker">
-                <input type="text" id="eqInput" autocomplete="off" placeholder="Buscar en el inventario…">
-                <div class="results" id="eqRes"></div>
+          <div class="col">
+            <section class="card">
+              <h2>Personal asistencial <span class="count" id="cPers">0</span></h2>
+              <p class="sub">Quién entra a la sala y con qué rol.</p>
+              <div class="body">
+                <div class="picker">
+                  <input type="text" id="persInput" autocomplete="off" placeholder="Buscar por nombre o rol…">
+                  <div class="results" id="persRes"></div>
+                </div>
+                <div class="chips" id="persChips"></div>
               </div>
-              <div class="chips" id="eqChips"></div>
-              <div class="toolbar"><button class="btn ghost sm" id="btnImportEq">Cargar inventario</button></div>
-            </div>
-          </section>
-        </div>
+            </section>
+          </div>
 
-        <div class="col">
-          <section class="card">
-            <h2>Instrumentación e insumos <span class="count" id="cIns">0</span></h2>
-            <div class="body">
-              <div class="picker">
-                <input type="text" id="insInput" autocomplete="off" placeholder="Buscar insumo o instrumental…">
-                <div class="results" id="insRes"></div>
+          <div class="col">
+            <section class="card">
+              <h2>Paso a paso <span class="count" id="cSteps">0</span></h2>
+              <p class="sub">Cada paso queda con su hora al marcarlo.</p>
+              <div class="body">
+                <div style="display:flex;gap:8px">
+                  <input type="text" id="stepInput" placeholder="Describir el paso…" autocomplete="off">
+                  <button class="btn" id="btnAddStep">Añadir</button>
+                </div>
+                <ol class="steps" id="stepList" style="margin-top:6px"></ol>
               </div>
-              <div class="chips" id="insChips"></div>
-            </div>
-          </section>
+            </section>
+          </div>
         </div>
+      </section>
 
-        <div class="col">
-          <section class="card">
-            <h2>Registro de eventos <button class="btn ghost sm sp" id="btnNote">Añadir nota</button></h2>
-            <div id="log"><div class="empty">Los eventos aparecen aquí al iniciar la sesión.</div></div>
-          </section>
+      <section class="block">
+        <p class="eyebrow">Recursos y configuración</p>
+        <div class="grid">
+          <div class="col">
+            <section class="card">
+              <h2>Equipos biomédicos <span class="count" id="cEq">0</span></h2>
+              <div class="body">
+                <div class="picker">
+                  <input type="text" id="eqInput" autocomplete="off" placeholder="Buscar en el inventario…">
+                  <div class="results" id="eqRes"></div>
+                </div>
+                <div class="chips" id="eqChips"></div>
+                <div class="toolbar"><button class="btn ghost sm" id="btnImportEq">Cargar inventario</button></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="col">
+            <section class="card">
+              <h2>Instrumentación e insumos <span class="count" id="cIns">0</span></h2>
+              <div class="body">
+                <div class="picker">
+                  <input type="text" id="insInput" autocomplete="off" placeholder="Buscar insumo o instrumental…">
+                  <div class="results" id="insRes"></div>
+                </div>
+                <div class="chips" id="insChips"></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="col">
+            <section class="card">
+              <h2>Umbrales de alerta <button class="btn ghost sm sp" id="btnTest">Probar</button></h2>
+              <div class="body">
+                <div class="thr-head"><span>Variable</span><span>Mín</span><span>Máx</span></div>
+                <div id="thrList"></div>
+                <p class="hint" style="margin:10px 0 0">Contrastar con la Resolución 3100 de 2019 y ASHRAE 170 antes de usarlos como criterio formal.</p>
+              </div>
+            </section>
+          </div>
+
+          <div class="col">
+            <section class="card">
+              <h2>Fuente de datos</h2>
+              <div class="body">
+                <div class="seg" id="srcSeg">
+                  <button data-src="supabase" class="on">Supabase</button>
+                  <button data-src="local">ESP32</button>
+                  <button data-src="sim">Simulación</button>
+                </div>
+                <div id="localCfg" style="display:none;margin-top:13px">
+                  <label class="f" style="margin:0"><span>Dirección IP de la ESP32</span><input type="text" id="espIp" placeholder="192.168.1.45"></label>
+                  <div class="err" id="espErr"></div>
+                </div>
+                <div id="supaCfg" style="margin-top:13px">
+                  <label class="f"><span>URL del proyecto</span><input type="text" id="supaUrl" value="https://vpdtereegwgifeeomtsx.supabase.co"></label>
+                  <label class="f"><span>Clave publishable</span><input type="text" id="supaKey" value="sb_publishable_mWh5yJUPuomCYHLY2Q-ezw_wHVadiIh"></label>
+                  <label class="f" style="margin:0"><span>ID del dispositivo</span><input type="text" id="supaDev" value="esp32-quirofano-01"></label>
+                  <div class="err" id="supaErr"></div>
+                </div>
+                <p class="hint" style="margin:11px 0 0" id="srcHint">La ESP32 escribe en las tablas ambiente, luz y sonido. Esta vista consulta el último registro de cada una.</p>
+              </div>
+            </section>
+
+            <section class="card">
+              <h2>Reporte</h2>
+              <div class="body">
+                <button class="btn primary" id="btnPdf" disabled style="width:100%">Descargar reporte en PDF</button>
+                <p class="hint" style="margin:11px 0 0">Se habilita al finalizar la sesión.</p>
+              </div>
+            </section>
+          </div>
         </div>
+      </section>
 
-        <div class="col">
-          <section class="card">
-            <h2>Umbrales de alerta <button class="btn ghost sm sp" id="btnTest">Probar</button></h2>
-            <div class="body">
-              <div class="thr-head"><span>Variable</span><span>Mín</span><span>Máx</span></div>
-              <div id="thrList"></div>
-              <p class="hint" style="margin:10px 0 0">Contrastar con la Resolución 3100 de 2019 y ASHRAE 170 antes de usarlos como criterio formal.</p>
-            </div>
-          </section>
-
-          <section class="card">
-            <h2>Fuente de datos</h2>
-            <div class="body">
-              <div class="seg" id="srcSeg">
-                <button data-src="supabase" class="on">Supabase</button>
-                <button data-src="local">ESP32</button>
-                <button data-src="sim">Simulación</button>
-              </div>
-              <div id="localCfg" style="display:none;margin-top:13px">
-                <label class="f" style="margin:0"><span>Dirección IP de la ESP32</span><input type="text" id="espIp" placeholder="192.168.1.45"></label>
-                <div class="err" id="espErr"></div>
-              </div>
-              <div id="supaCfg" style="margin-top:13px">
-                <label class="f"><span>URL del proyecto</span><input type="text" id="supaUrl" value="https://vpdtereegwgifeeomtsx.supabase.co"></label>
-                <label class="f"><span>Clave publishable</span><input type="text" id="supaKey" value="sb_publishable_mWh5yJUPuomCYHLY2Q-ezw_wHVadiIh"></label>
-                <label class="f" style="margin:0"><span>ID del dispositivo</span><input type="text" id="supaDev" value="esp32-quirofano-01"></label>
-                <div class="err" id="supaErr"></div>
-              </div>
-              <p class="hint" style="margin:11px 0 0" id="srcHint">La ESP32 escribe en las tablas ambiente, luz y sonido. Esta vista consulta el último registro de cada una.</p>
-            </div>
-          </section>
-
-          <section class="card">
-            <h2>Reporte</h2>
-            <div class="body">
-              <button class="btn primary" id="btnPdf" disabled style="width:100%">Descargar reporte en PDF</button>
-              <p class="hint" style="margin:11px 0 0">Se habilita al finalizar la sesión.</p>
-            </div>
-          </section>
-        </div>
-      </div>
-    </section>
-
-    <section class="block" id="summaryCard" style="display:none">
-      <p class="eyebrow">Resumen de la sesión</p>
-      <div id="summary"></div>
-    </section>
+      <section class="block" id="summaryCard" style="display:none">
+        <p class="eyebrow">Resumen de la sesión</p>
+        <div id="summary"></div>
+      </section>
+    </div>
   </main>
 </div>
 
@@ -559,7 +583,8 @@ const S = {
   datos:{}, fuera:{}, alarma:{}, streak:{},
   personal:[], equipos:[], insumos:[], pasos:[], eventos:[],
   procedimiento:'', mute:false, fuente:'supabase', ultimoBeep:0,
-  ultimaRecepcion:null, tablas:{ambiente:null,luz:null,sonido:null}, devEstado:null
+  frescura:null, tablas:{ambiente:null,luz:null,sonido:null},
+  tsRegistrado:{ambiente:null,luz:null,sonido:null}, devEstado:null
 };
 CH.forEach(c=>{S.datos[c.id]=[];S.fuera[c.id]=0;S.alarma[c.id]=false;S.streak[c.id]=0;});
 
@@ -637,7 +662,7 @@ function refrescarRangos(){
 function dibujar(c){
   const cv=canvases[c.id]; if(!cv)return;
   const dpr=window.devicePixelRatio||1;
-  const w=cv.clientWidth||300, h=76;
+  const w=cv.clientWidth||300, h=cv.clientHeight||132;
   if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){
     cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
   }
@@ -780,14 +805,15 @@ async function lecturaSupabase(){
   S.tablas.sonido   = son?Date.parse(son.ts):null;
 
   if(!amb&&!luz&&!son)throw new Error('No hay filas para el device_id "'+dev+'".');
-
-  return {
-    temp : amb?amb.temp:null,
-    hum  : amb?amb.hum :null,
-    lux  : luz?luz.lux :null,
-    ruido: son?son.db  :null
-  };
+  return {ambiente:amb, luz:luz, sonido:son};
 }
+
+/* Qué canal y qué columna trae cada tabla */
+const MAPA = {
+  ambiente:[['temp','temp'],['hum','hum']],
+  luz     :[['lux','lux']],
+  sonido  :[['ruido','db']]
+};
 
 /* ============ esp32 en red local ============ */
 async function lecturaLocal(){
@@ -811,24 +837,54 @@ function tick(){
   $('#clock').textContent=hhmmss(S.acumulado+(S.fase==='run'?Date.now()-S.t0:0));
 }
 async function ciclo(){
-  const ts=Date.now();
+  const ahora=Date.now();
+
   if(S.fuente==='sim'){
-    CH.forEach(c=>registrar(c.id,lecturaSim(c),ts));
-    S.ultimaRecepcion=ts;
+    CH.forEach(c=>registrar(c.id,lecturaSim(c),ahora));
+    S.frescura=ahora;
     return;
   }
-  const errSel=S.fuente==='local'?'#espErr':'#supaErr';
+
+  if(S.fuente==='local'){
+    try{
+      const d=await lecturaLocal();
+      $('#espErr').textContent='';
+      CH.forEach(c=>{
+        const v=d[c.id]!==undefined&&d[c.id]!==null?Number(d[c.id]):null;
+        if(v!==null&&!isNaN(v))registrar(c.id,v,ahora);
+      });
+      S.frescura=ahora;
+    }catch(e){ $('#espErr').textContent=e.message; }
+    return;
+  }
+
   try{
-    const d=S.fuente==='local'?await lecturaLocal():await lecturaSupabase();
-    $(errSel).textContent='';
-    let algo=false;
-    CH.forEach(c=>{
-      const v=d[c.id]!==undefined&&d[c.id]!==null?Number(d[c.id]):null;
-      if(v!==null&&!isNaN(v)){registrar(c.id,v,ts);algo=true;}
+    const d=await lecturaSupabase();
+    $('#supaErr').textContent='';
+
+    /*
+     * Supabase devuelve la última fila guardada aunque el dispositivo
+     * lleve horas apagado. Por eso se compara la marca de tiempo de la
+     * fila: si no cambió, no hay dato nuevo y no se registra nada.
+     */
+    Object.keys(MAPA).forEach(tabla=>{
+      const fila=d[tabla];
+      if(!fila)return;
+      const tFila=Date.parse(fila.ts);
+      if(!tFila||S.tsRegistrado[tabla]===tFila)return;
+      S.tsRegistrado[tabla]=tFila;
+
+      MAPA[tabla].forEach(([canal,columna])=>{
+        const v=fila[columna];
+        if(v===null||v===undefined||isNaN(Number(v)))return;
+        registrar(canal,Number(v),tFila);
+      });
     });
-    if(algo)S.ultimaRecepcion=ts;
+
+    const marcas=Object.values(S.tablas).filter(Boolean);
+    if(marcas.length)S.frescura=Math.max.apply(null,marcas);
   }catch(e){
-    $(errSel).textContent=e.message;
+    $('#supaErr').textContent=e.message;
   }
 }
 
@@ -847,10 +903,10 @@ function actualizarDispositivo(){
   let estado,texto;
   if(S.fuente==='sim'){
     estado='lento';texto='Modo simulación';
-  }else if(S.ultimaRecepcion===null){
+  }else if(S.frescura===null){
     estado='espera';texto='Esperando datos';
   }else{
-    const edad=ahora-S.ultimaRecepcion;
+    const edad=Math.max(0,ahora-S.frescura);
     if(edad<=10000){estado='ok';texto='Conectado';}
     else if(edad<=60000){estado='lento';texto='Señal intermitente';}
     else{estado='off';texto='Desconectado';}
@@ -866,8 +922,7 @@ function actualizarDispositivo(){
 
   const dev=$('#supaDev').value.trim()||'—';
   const activas=['ambiente','luz','sonido'].filter(t=>S.tablas[t]&&ahora-S.tablas[t]<60000).length;
-  const ultima=S.ultimaRecepcion?edadTexto(ahora-S.ultimaRecepcion):'—';
-  const lecturas=S.datos.temp.length;
+  const ultima=S.frescura?edadTexto(Math.max(0,ahora-S.frescura)):'—';
 
   $('#devGrid').innerHTML=`
     <div class="d ${estado==='ok'?'ok':estado==='off'?'off':''}">
@@ -927,7 +982,7 @@ $('#btnEnd').addEventListener('click',()=>{
   CH.forEach(c=>{S.alarma[c.id]=false;$('#ch-'+c.id).classList.remove('alarm');dibujar(c);});
   banner();log('fin','Sesión finalizada. Duración '+hhmmss(S.acumulado)+'.');
   resumen();
-  $('#summaryCard').scrollIntoView({behavior:'smooth',block:'nearest'});
+  vista('ses');
 });
 function aplicarMute(){
   $('#mIcon').setAttribute('d',S.mute?'M15.5 9.5l5 5M20.5 9.5l-5 5':'M16.5 9.4a4 4 0 010 5.2');
@@ -945,12 +1000,19 @@ $('#btnTest').addEventListener('click',()=>{
   log('nota','Excursión forzada en '+excursion().toLowerCase()+'.');
 });
 
-/* rail */
+/* ============ pestañas ============ */
+function vista(v){
+  $('#viewMon').hidden = (v!=='mon');
+  $('#viewSes').hidden = (v!=='ses');
+  $$('#tabs button, #rail button[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(v==='mon')CH.forEach(dibujar);   // el canvas oculto no tiene ancho
+}
+$('#tabs').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-v]');if(b)vista(b.dataset.v);
+});
 $('#rail').addEventListener('click',e=>{
-  const b=e.target.closest('button[data-go]');if(!b)return;
-  $$('#rail button[data-go]').forEach(x=>x.classList.toggle('on',x===b));
-  const el=document.getElementById(b.dataset.go);
-  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  const b=e.target.closest('button[data-v]');if(b)vista(b.dataset.v);
 });
 
 /* ============ resumen ============ */
