@@ -254,6 +254,29 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
 .dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none;}
 .thr input{font-family:var(--mono);text-align:center;padding:6px 4px;}
 
+/* ===== dispositivo ===== */
+.devpill{
+  margin-left:auto;display:inline-flex;align-items:center;gap:7px;
+  font-size:11.5px;font-weight:500;border-radius:100px;padding:4px 12px 4px 9px;
+  background:var(--line-soft);color:var(--ink-2);
+}
+.devpill .led{width:7px;height:7px;border-radius:50%;background:var(--ink-3);flex:none;}
+.devpill[data-s="ok"]{background:var(--accent-soft);color:#0B7A6E;}
+.devpill[data-s="ok"] .led{background:var(--ok);box-shadow:0 0 0 3px rgba(23,166,115,.18);animation:blink 1.6s infinite;}
+.devpill[data-s="lento"]{background:#FFF4E2;color:#9A6414;}
+.devpill[data-s="lento"] .led{background:#E0942A;}
+.devpill[data-s="off"]{background:var(--alarm-soft);color:#9B2333;}
+.devpill[data-s="off"] .led{background:var(--alarm);}
+.dev-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+@media (max-width:900px){.dev-grid{grid-template-columns:1fr 1fr;}}
+.dev-grid .d{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#FAFCFC;}
+.dev-grid .d small{color:var(--ink-3);font-size:11.5px;display:block;}
+.dev-grid .d b{font-family:var(--mono);font-size:15px;font-weight:500;display:block;margin-top:5px;word-break:break-all;}
+.dev-grid .d b.big{font-size:22px;letter-spacing:-.02em;}
+.dev-grid .d .tag{font-size:11px;color:var(--ink-3);font-family:var(--sans);}
+.dev-grid .d.off b{color:var(--alarm);}
+.dev-grid .d.ok b{color:var(--accent);}
+
 /* ===== varios ===== */
 .seg{display:flex;background:var(--line-soft);border-radius:9px;padding:3px;gap:3px;}
 .seg button{flex:1;background:transparent;border:none;padding:7px;cursor:pointer;color:var(--ink-2);border-radius:7px;font-size:12.5px;}
@@ -273,7 +296,8 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
 
 <nav id="rail" aria-label="Secciones">
   <div class="mark">SQ</div>
-  <button data-go="secAmb" class="on" title="Ambiente" aria-label="Ambiente"><svg viewBox="0 0 24 24"><path d="M3 15l4-5 4 4 4-7 6 8"/></svg></button>
+  <button data-go="secMonitor" class="on" title="Dispositivo" aria-label="Dispositivo"><svg viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="12" rx="2"/><path d="M8 20h8M12 15.5V20"/></svg></button>
+  <button data-go="secAmb" title="Ambiente" aria-label="Ambiente"><svg viewBox="0 0 24 24"><path d="M3 15l4-5 4 4 4-7 6 8"/></svg></button>
   <button data-go="secPac" title="Paciente" aria-label="Paciente"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6"/></svg></button>
   <button data-go="secEq" title="Equipos e insumos" aria-label="Equipos e insumos"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="13" rx="2"/><path d="M8 21h8M12 17.5V21"/></svg></button>
   <button data-go="secOp" title="Eventos y umbrales" aria-label="Eventos y umbrales"><svg viewBox="0 0 24 24"><path d="M12 4.5v3M12 16.5v3M4.5 12h3M16.5 12h3"/><circle cx="12" cy="12" r="4"/></svg></button>
@@ -300,6 +324,17 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
   <div id="banner" role="status"><i class="led"></i><span id="bannerTxt"></span></div>
 
   <main>
+    <section class="block" id="secMonitor">
+      <p class="eyebrow">Dispositivo</p>
+      <div class="card">
+        <h2>Monitoreo continuo <span class="devpill" id="devPill" data-s="espera"><i class="led"></i><span id="devTxt">Esperando datos</span></span></h2>
+        <p class="sub">La consulta corre siempre, haya sesión abierta o no. El cronómetro solo delimita qué tramo entra al reporte.</p>
+        <div class="body">
+          <div class="dev-grid" id="devGrid"></div>
+        </div>
+      </div>
+    </section>
+
     <section class="block" id="secAmb">
       <p class="eyebrow">Condiciones ambientales</p>
       <div class="grid" id="channels"></div>
@@ -523,7 +558,8 @@ const S = {
   inicio:null, fin:null,
   datos:{}, fuera:{}, alarma:{}, streak:{},
   personal:[], equipos:[], insumos:[], pasos:[], eventos:[],
-  procedimiento:'', mute:false, fuente:'supabase', ultimoBeep:0
+  procedimiento:'', mute:false, fuente:'supabase', ultimoBeep:0,
+  ultimaRecepcion:null, tablas:{ambiente:null,luz:null,sonido:null}, devEstado:null
 };
 CH.forEach(c=>{S.datos[c.id]=[];S.fuera[c.id]=0;S.alarma[c.id]=false;S.streak[c.id]=0;});
 
@@ -663,9 +699,10 @@ function escalaVisible(c,serie){
 function registrar(id,valor,ts){
   const c=ch(id);
   S.datos[id].push({t:ts,v:valor});
+  if(S.datos[id].length>5400)S.datos[id].shift();
   $('#v-'+id).textContent=valor.toFixed(c.dec);
 
-  const vs=S.datos[id].map(p=>p.v);
+  const vs=serieSesion(id).map(p=>p.v);
   const prom=vs.reduce((a,b)=>a+b,0)/vs.length;
   $('#mn-'+id).textContent='mín '+Math.min.apply(null,vs).toFixed(c.dec);
   $('#mx-'+id).textContent='máx '+Math.max.apply(null,vs).toFixed(c.dec);
@@ -738,6 +775,10 @@ async function lecturaSupabase(){
     ultimaFila(base,key,'sonido',dev)
   ]);
 
+  S.tablas.ambiente = amb?Date.parse(amb.ts):null;
+  S.tablas.luz      = luz?Date.parse(luz.ts):null;
+  S.tablas.sonido   = son?Date.parse(son.ts):null;
+
   if(!amb&&!luz&&!son)throw new Error('No hay filas para el device_id "'+dev+'".');
 
   return {
@@ -770,23 +811,74 @@ function tick(){
   $('#clock').textContent=hhmmss(S.acumulado+(S.fase==='run'?Date.now()-S.t0:0));
 }
 async function ciclo(){
-  if(S.fase!=='run')return;
   const ts=Date.now();
   if(S.fuente==='sim'){
     CH.forEach(c=>registrar(c.id,lecturaSim(c),ts));
+    S.ultimaRecepcion=ts;
     return;
   }
   const errSel=S.fuente==='local'?'#espErr':'#supaErr';
   try{
     const d=S.fuente==='local'?await lecturaLocal():await lecturaSupabase();
     $(errSel).textContent='';
+    let algo=false;
     CH.forEach(c=>{
       const v=d[c.id]!==undefined&&d[c.id]!==null?Number(d[c.id]):null;
-      if(v!==null&&!isNaN(v))registrar(c.id,v,ts);
+      if(v!==null&&!isNaN(v)){registrar(c.id,v,ts);algo=true;}
     });
+    if(algo)S.ultimaRecepcion=ts;
   }catch(e){
     $(errSel).textContent=e.message;
   }
+}
+
+/* ============ estado del dispositivo ============ */
+function edadTexto(ms){
+  if(ms===null||ms===undefined)return '—';
+  const s=Math.max(0,Math.round(ms/1000));
+  if(s<60)return s+' s';
+  if(s<3600)return Math.round(s/60)+' min';
+  return Math.round(s/3600)+' h';
+}
+function actualizarDispositivo(){
+  const ahora=Date.now();
+  const pill=$('#devPill');
+
+  let estado,texto;
+  if(S.fuente==='sim'){
+    estado='lento';texto='Modo simulación';
+  }else if(S.ultimaRecepcion===null){
+    estado='espera';texto='Esperando datos';
+  }else{
+    const edad=ahora-S.ultimaRecepcion;
+    if(edad<=10000){estado='ok';texto='Conectado';}
+    else if(edad<=60000){estado='lento';texto='Señal intermitente';}
+    else{estado='off';texto='Desconectado';}
+  }
+  pill.dataset.s=estado;
+  $('#devTxt').textContent=texto;
+
+  if(S.devEstado!==null&&S.devEstado!==estado){
+    if(estado==='ok')log('normal','Dispositivo conectado.');
+    else if(estado==='off')log('alarma','Dispositivo sin enviar datos.');
+  }
+  S.devEstado=estado;
+
+  const dev=$('#supaDev').value.trim()||'—';
+  const activas=['ambiente','luz','sonido'].filter(t=>S.tablas[t]&&ahora-S.tablas[t]<60000).length;
+  const ultima=S.ultimaRecepcion?edadTexto(ahora-S.ultimaRecepcion):'—';
+  const lecturas=S.datos.temp.length;
+
+  $('#devGrid').innerHTML=`
+    <div class="d ${estado==='ok'?'ok':estado==='off'?'off':''}">
+      <small>Estado</small><b class="big">${texto}</b>
+      <span class="tag">${S.fuente==='supabase'?'vía Supabase':S.fuente==='local'?'red local':'sin hardware'}</span>
+    </div>
+    <div class="d"><small>Dispositivo</small><b>${dev}</b><span class="tag">identificador</span></div>
+    <div class="d"><small>Última lectura</small><b class="big">${ultima}</b><span class="tag">antigüedad</span></div>
+    <div class="d"><small>Tablas activas</small><b class="big">${activas} / 3</b>
+      <span class="tag">${['ambiente','luz','sonido'].map(t=>t+' '+edadTexto(S.tablas[t]?ahora-S.tablas[t]:null)).join(' · ')}</span>
+    </div>`;
 }
 
 /* ============ log ============ */
@@ -822,19 +914,15 @@ $('#btnStart').addEventListener('click',()=>{
     S.inicio=new Date();log('inicio','Sesión iniciada. Fuente: '+(S.fuente==='sim'?'simulación':'Supabase'));
   }else log('inicio','Sesión reanudada.');
   S.t0=Date.now();fase('run');
-  clearInterval(S.tickId);clearInterval(S.dataId);
-  S.tickId=setInterval(tick,250);
-  S.dataId=setInterval(ciclo,1000);
-  ciclo();beep(false);
+  beep(false);
 });
 $('#btnPause').addEventListener('click',()=>{
   S.acumulado+=Date.now()-S.t0;
-  clearInterval(S.dataId);fase('pause');
-  log('pausa','Sesión en pausa. El contador y el registro se detuvieron.');
+  fase('pause');
+  log('pausa','Sesión en pausa. El monitoreo sigue activo.');
 });
 $('#btnEnd').addEventListener('click',()=>{
   if(S.fase==='run')S.acumulado+=Date.now()-S.t0;
-  clearInterval(S.tickId);clearInterval(S.dataId);
   S.fin=new Date();fase('end');tick();
   CH.forEach(c=>{S.alarma[c.id]=false;$('#ch-'+c.id).classList.remove('alarm');dibujar(c);});
   banner();log('fin','Sesión finalizada. Duración '+hhmmss(S.acumulado)+'.');
@@ -866,13 +954,21 @@ $('#rail').addEventListener('click',e=>{
 });
 
 /* ============ resumen ============ */
+function serieSesion(id){
+  const d=S.datos[id];
+  if(!S.inicio)return d;
+  const t0=S.inicio.getTime(), t1=S.fin?S.fin.getTime():Date.now();
+  return d.filter(p=>p.t>=t0&&p.t<=t1);
+}
 function estadisticas(id){
-  const vs=S.datos[id].map(p=>p.v);
-  if(!vs.length)return null;
   const c=ch(id);
+  const serie=serieSesion(id);
+  if(!serie.length)return null;
+  const vs=serie.map(p=>p.v);
+  const fuera=vs.filter(v=>v<c.min||v>c.max).length;
   return{min:Math.min.apply(null,vs),max:Math.max.apply(null,vs),
     prom:vs.reduce((a,b)=>a+b,0)/vs.length,n:vs.length,
-    fuera:S.fuera[id],pct:(S.fuera[id]/vs.length)*100,
+    fuera:fuera,pct:(fuera/vs.length)*100,
     dec:c.dec,unidad:c.unidad,nombre:c.nombre};
 }
 function resumen(){
@@ -886,7 +982,7 @@ function resumen(){
   }).join('');
   const alarmas=S.eventos.filter(e=>e.tipo==='alarma').length;
   $('#summary').innerHTML=`<div class="stat-grid">${cards}</div>
-    <p class="hint" style="margin:12px 0 0">Duración ${hhmmss(S.acumulado)} · ${S.datos.temp.length} lecturas por variable · ${alarmas} alertas registradas.</p>`;
+    <p class="hint" style="margin:12px 0 0">Duración ${hhmmss(S.acumulado)} · ${serieSesion('temp').length} lecturas por variable · ${alarmas} alertas registradas.</p>`;
 }
 
 /* ============ buscadores ============ */
@@ -1066,7 +1162,7 @@ function graficaCompleta(c){
   const cv=$('#exportCanvas'),x=cv.getContext('2d');
   const w=cv.width,h=cv.height,pd={l:72,r:22,t:36,b:40};
   x.fillStyle='#FFFFFF';x.fillRect(0,0,w,h);
-  const serie=S.datos[c.id];
+  const serie=serieSesion(c.id);
   if(serie.length<2){
     x.fillStyle='#999';x.font='22px sans-serif';
     x.fillText('Sin datos suficientes',pd.l,h/2);
@@ -1231,6 +1327,11 @@ construirCanales();
 pintarUmbrales();
 pintarPersonal();pintarEquipos();pintarInsumos();pintarPasos();
 fase('idle');
+actualizarDispositivo();
+setInterval(tick,250);
+setInterval(ciclo,1000);
+setInterval(actualizarDispositivo,1000);
+ciclo();
 })();
 </script>
 </body>
