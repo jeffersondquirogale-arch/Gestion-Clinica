@@ -131,6 +131,9 @@ main{padding:20px 22px 40px;max-width:1900px;margin:0 auto;}
 .block{margin-bottom:26px;}
 
 /* ===== tarjetas de canal ===== */
+.channels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start;}
+@media (max-width:1240px){.channels{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:760px){.channels{grid-template-columns:1fr;}}
 .ch{
   background:var(--card);border:1px solid var(--line);border-radius:var(--r);
   box-shadow:var(--sh);padding:15px 16px 0;overflow:hidden;position:relative;
@@ -140,6 +143,14 @@ main{padding:20px 22px 40px;max-width:1900px;margin:0 auto;}
 .ch.alarm{border-color:#F0C3CB;background:#FFFAFB;}
 .ch.alarm::after{background:var(--alarm);}
 .ch-name{font-size:12.5px;color:var(--ink-2);font-weight:500;}
+.ch-vals{display:flex;gap:22px;flex-wrap:wrap;margin-top:4px;}
+.ch-vals .v{display:flex;align-items:baseline;gap:4px;flex-wrap:wrap;}
+.ch-vals .v span{font-family:var(--mono);font-variant-numeric:tabular-nums;
+  font-size:32px;font-weight:500;line-height:1.1;letter-spacing:-.025em;color:var(--c);}
+.ch-vals .v i{font-style:normal;font-size:13px;color:var(--ink-3);}
+.ch-vals .v small{display:block;width:100%;font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-top:2px;}
+.ch.alarm .ch-vals .v span{color:var(--alarm);}
+.ch-foot{gap:16px;flex-wrap:wrap;}
 .ch-val{
   font-family:var(--mono);font-variant-numeric:tabular-nums;
   font-size:36px;font-weight:500;line-height:1.1;letter-spacing:-.025em;
@@ -254,6 +265,29 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
 .dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none;}
 .thr input{font-family:var(--mono);text-align:center;padding:6px 4px;}
 
+/* ===== análisis ===== */
+.card.ana{margin-bottom:14px;}
+.ana-row{display:grid;grid-template-columns:minmax(0,2.1fr) minmax(0,1fr);gap:18px;align-items:start;}
+@media (max-width:1100px){.ana-row{grid-template-columns:1fr;}}
+canvas.ana-serie{display:block;width:100%;height:210px;}
+canvas.ana-hist{display:block;width:100%;height:120px;}
+.ana-side{display:flex;flex-direction:column;gap:12px;}
+.ana-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.ana-stats div{background:#FAFCFC;padding:8px 10px;}
+.ana-stats small{display:block;color:var(--ink-3);font-size:10.5px;}
+.ana-stats b{font-family:var(--mono);font-size:14px;font-weight:500;}
+.leyenda{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-3);margin-bottom:8px;}
+.leyenda i{display:inline-block;width:14px;height:2.5px;border-radius:2px;margin-right:5px;vertical-align:middle;}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+.tbl th,.tbl td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line-soft);white-space:nowrap;}
+.tbl th:first-child,.tbl td:first-child{text-align:left;}
+.tbl th{color:var(--ink-3);font-weight:500;font-size:11px;border-bottom:1px solid var(--line);}
+.tbl td{font-family:var(--mono);}
+.tbl td:first-child{font-family:var(--sans);}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl .mal{color:var(--alarm);}
+.tbl .bien{color:var(--accent);}
+
 /* ===== pestañas ===== */
 .tabs{
   display:flex;gap:2px;padding:0 22px;background:var(--card);
@@ -310,6 +344,7 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
 <nav id="rail" aria-label="Vistas">
   <div class="mark">SQ</div>
   <button data-v="mon" class="on" title="Monitoreo" aria-label="Monitoreo"><svg viewBox="0 0 24 24"><path d="M3 15l4-5 4 4 4-7 6 8"/></svg></button>
+  <button data-v="ana" title="Análisis" aria-label="Análisis"><svg viewBox="0 0 24 24"><path d="M4 20V10M9.5 20V4M15 20v-7M20.5 20V7"/></svg></button>
   <button data-v="ses" title="Sesión" aria-label="Sesión"><svg viewBox="0 0 24 24"><rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg></button>
   <div class="spacer"></div>
   <button id="btnMute" title="Silenciar alarmas" aria-label="Silenciar alarmas"><svg viewBox="0 0 24 24"><path d="M6 9.5h3l4-3.2v11.4l-4-3.2H6z"/><path id="mIcon" d="M16.5 9.4a4 4 0 010 5.2"/></svg></button>
@@ -335,6 +370,7 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
 
   <nav class="tabs" id="tabs">
     <button data-v="mon" class="on">Monitoreo</button>
+    <button data-v="ana">Análisis</button>
     <button data-v="ses">Sesión y reporte</button>
   </nav>
 
@@ -348,13 +384,14 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
           <p class="sub">Corre siempre, haya sesión abierta o no. El cronómetro solo delimita qué tramo entra al reporte.</p>
           <div class="body">
             <div class="dev-grid" id="devGrid"></div>
+            <div class="err" id="supaErr"></div>
           </div>
         </div>
       </section>
 
       <section class="block">
         <p class="eyebrow">Condiciones ambientales</p>
-        <div class="grid" id="channels"></div>
+        <div class="channels" id="channels"></div>
       </section>
 
       <section class="block">
@@ -363,6 +400,40 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
           <h2>Registro <button class="btn ghost sm sp" id="btnNote">Añadir nota</button></h2>
           <div id="log"><div class="empty">Aquí quedan las alertas, los pasos completados y las caídas del dispositivo.</div></div>
         </div>
+      </section>
+    </div>
+
+    <!-- ===================== VISTA ANÁLISIS ===================== -->
+    <div id="viewAna" hidden>
+      <section class="block">
+        <p class="eyebrow">Ventana de análisis</p>
+        <div class="card">
+          <h2>Datos acumulados <span class="count" id="anaInfo">—</span></h2>
+          <p class="sub">Consulta el histórico guardado en Supabase para la sala configurada.</p>
+          <div class="body">
+            <div class="seg" id="anaSeg" style="max-width:480px">
+              <button data-min="15" class="on">15 min</button>
+              <button data-min="60">1 h</button>
+              <button data-min="360">6 h</button>
+              <button data-min="1440">24 h</button>
+            </div>
+            <div class="toolbar">
+              <button class="btn sm" id="btnAna">Actualizar</button>
+              <span class="hint" id="anaEstado" style="align-self:center"></span>
+            </div>
+            <div class="err" id="anaErr"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block">
+        <p class="eyebrow">Comportamiento por variable</p>
+        <div id="anaCards"></div>
+      </section>
+
+      <section class="block">
+        <p class="eyebrow">Resumen estadístico</p>
+        <div class="card"><div class="body" style="overflow-x:auto"><table class="tbl" id="anaTabla"></table></div></div>
       </section>
     </div>
 
@@ -468,7 +539,7 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
 
           <div class="col">
             <section class="card">
-              <h2>Umbrales de alerta <button class="btn ghost sm sp" id="btnTest">Probar</button></h2>
+              <h2>Umbrales de alerta</h2>
               <div class="body">
                 <div class="thr-head"><span>Variable</span><span>Mín</span><span>Máx</span></div>
                 <div id="thrList"></div>
@@ -478,28 +549,6 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
           </div>
 
           <div class="col">
-            <section class="card">
-              <h2>Fuente de datos</h2>
-              <div class="body">
-                <div class="seg" id="srcSeg">
-                  <button data-src="supabase" class="on">Supabase</button>
-                  <button data-src="local">ESP32</button>
-                  <button data-src="sim">Simulación</button>
-                </div>
-                <div id="localCfg" style="display:none;margin-top:13px">
-                  <label class="f" style="margin:0"><span>Dirección IP de la ESP32</span><input type="text" id="espIp" placeholder="192.168.1.45"></label>
-                  <div class="err" id="espErr"></div>
-                </div>
-                <div id="supaCfg" style="margin-top:13px">
-                  <label class="f"><span>URL del proyecto</span><input type="text" id="supaUrl" value="https://vpdtereegwgifeeomtsx.supabase.co"></label>
-                  <label class="f"><span>Clave publishable</span><input type="text" id="supaKey" value="sb_publishable_mWh5yJUPuomCYHLY2Q-ezw_wHVadiIh"></label>
-                  <label class="f" style="margin:0"><span>ID del dispositivo</span><input type="text" id="supaDev" value="esp32-quirofano-01"></label>
-                  <div class="err" id="supaErr"></div>
-                </div>
-                <p class="hint" style="margin:11px 0 0" id="srcHint">La ESP32 escribe en las tablas ambiente, luz y sonido. Esta vista consulta el último registro de cada una.</p>
-              </div>
-            </section>
-
             <section class="card">
               <h2>Reporte</h2>
               <div class="body">
@@ -527,12 +576,17 @@ ol.steps time{font-family:var(--mono);font-size:10.5px;color:var(--accent);displ
 (function(){
 "use strict";
 
+/* ============ conexión ============ */
+const SUPA_URL = 'https://vpdtereegwgifeeomtsx.supabase.co';
+const SUPA_KEY = 'sb_publishable_mWh5yJUPuomCYHLY2Q-ezw_wHVadiIh';
+const SALA     = 'quirofano-1';
+
 /* ============ canales ============ */
 const CH = [
-  {id:'temp', nombre:'Temperatura',      unidad:'°C',  color:'#E2823C', dec:1, min:18,  max:24,  base:21.5, paso:0.12, escala:[14,30]},
-  {id:'hum',  nombre:'Humedad relativa', unidad:'%',   color:'#2E8FD4', dec:0, min:30,  max:60,  base:45,   paso:0.7,  escala:[15,80]},
-  {id:'lux',  nombre:'Iluminación',      unidad:'lux', color:'#CB9A17', dec:0, min:300, max:500, base:410,  paso:11,   escala:[0,900]},
-  {id:'ruido',nombre:'Ruido',            unidad:'dB',  color:'#C94263', dec:1, min:0,   max:45,  base:38,   paso:1.4,  escala:[25,95]}
+  {id:'temp', nombre:'Temperatura',      unidad:'°C',  color:'#E2823C', dec:1, min:18,  max:24,  escala:[14,30]},
+  {id:'hum',  nombre:'Humedad relativa', unidad:'%',   color:'#2E8FD4', dec:0, min:30,  max:60,  escala:[15,80]},
+  {id:'lux',  nombre:'Iluminación',      unidad:'lux', color:'#CB9A17', dec:0, min:300, max:500,  escala:[0,900]},
+  {id:'ruido',nombre:'Ruido',            unidad:'dB',  color:'#C94263', dec:1, min:0,   max:45,   escala:[25,95]}
 ];
 const VENTANA = 150;
 const DEBOUNCE = 3;
@@ -582,8 +636,9 @@ const S = {
   inicio:null, fin:null,
   datos:{}, fuera:{}, alarma:{}, streak:{},
   personal:[], equipos:[], insumos:[], pasos:[], eventos:[],
-  procedimiento:'', mute:false, fuente:'supabase', ultimoBeep:0,
+  procedimiento:'', mute:false, ultimoBeep:0,
   frescura:null, tablas:{ambiente:null,luz:null,sonido:null},
+  placas:{ambiente:null,luz:null,sonido:null},
   tsRegistrado:{ambiente:null,luz:null,sonido:null}, devEstado:null
 };
 CH.forEach(c=>{S.datos[c.id]=[];S.fuera[c.id]=0;S.alarma[c.id]=false;S.streak[c.id]=0;});
@@ -639,76 +694,57 @@ function beep(grave){
   }catch(e){/* el navegador bloquea el audio hasta la primera interacción */}
 }
 
-/* ============ render de canales ============ */
+/* ============ grupos de canales ============ */
+/* Temperatura y humedad salen del mismo sensor, así que comparten tarjeta */
+const GRUPOS = [
+  {id:'ambiente', nombre:'Temperatura y humedad', canales:['temp','hum']},
+  {id:'luz',      nombre:'Iluminación',           canales:['lux']},
+  {id:'sonido',   nombre:'Ruido',                 canales:['ruido']}
+];
+const grupoDe = id => GRUPOS.find(g=>g.canales.includes(id));
+
 const canvases={};
 function construirCanales(){
-  $('#channels').innerHTML=CH.map(c=>`
-    <article class="ch" id="ch-${c.id}" style="--c:${c.color}">
-      <div class="ch-name">${c.nombre}</div>
-      <div class="ch-val"><span id="v-${c.id}">--</span><span class="ch-unit">${c.unidad}</span></div>
-      <div class="ch-range" id="rg-${c.id}"></div>
-      <canvas id="cv-${c.id}" aria-hidden="true"></canvas>
-      <div class="ch-foot"><span id="mn-${c.id}">mín --</span><span id="pr-${c.id}">prom --</span><span id="mx-${c.id}">máx --</span></div>
-    </article>`).join('');
-  CH.forEach(c=>{canvases[c.id]=$('#cv-'+c.id);});
+  $('#channels').innerHTML=GRUPOS.map(g=>{
+    const c0=ch(g.canales[0]);
+    return `
+    <article class="ch" id="g-${g.id}" style="--c:${c0.color}">
+      <div class="ch-name">${g.nombre}</div>
+      <div class="ch-vals">
+        ${g.canales.map(id=>{const c=ch(id);return `
+          <div class="v" style="--c:${c.color}">
+            <span id="v-${id}">--</span><i>${c.unidad}</i>
+            <small class="ch-range" id="rg-${id}"></small>
+          </div>`;}).join('')}
+      </div>
+      <canvas id="cv-${g.id}" aria-hidden="true"></canvas>
+      <div class="ch-foot" id="ft-${g.id}"></div>
+    </article>`;}).join('');
+
+  GRUPOS.forEach(g=>{canvases[g.id]=$('#cv-'+g.id);});
   refrescarRangos();
-  window.addEventListener('resize',()=>CH.forEach(dibujar));
-  CH.forEach(dibujar);
+  window.addEventListener('resize',()=>GRUPOS.forEach(dibujar));
+  GRUPOS.forEach(dibujar);
 }
 function refrescarRangos(){
-  CH.forEach(c=>{$('#rg-'+c.id).textContent=`rango ${c.min} – ${c.max} ${c.unidad}`;});
+  CH.forEach(c=>{
+    const el=$('#rg-'+c.id);
+    if(el)el.textContent=`${c.min}–${c.max}`;
+  });
 }
 
-function dibujar(c){
-  const cv=canvases[c.id]; if(!cv)return;
-  const dpr=window.devicePixelRatio||1;
-  const w=cv.clientWidth||300, h=cv.clientHeight||132;
-  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){
-    cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
-  }
-  const x=cv.getContext('2d');
-  x.setTransform(dpr,0,0,dpr,0,0);
-  x.clearRect(0,0,w,h);
-
-  const serie=S.datos[c.id].slice(-VENTANA);
-  const [lo,hi]=escalaVisible(c,serie);
-  const y=v=>h-4-((v-lo)/(hi-lo))*(h-10);
-  const trazo=S.alarma[c.id]?'#DC3B52':c.color;
-
-  const yMax=y(Math.min(c.max,hi)), yMin=y(Math.max(c.min,lo));
-  x.fillStyle='#F3F6F7';
-  x.fillRect(0,yMax,w,Math.max(0,yMin-yMax));
-  x.strokeStyle='#DCE4E5';x.lineWidth=1;x.setLineDash([3,4]);
-  [yMax,yMin].forEach(yy=>{x.beginPath();x.moveTo(0,yy+.5);x.lineTo(w,yy+.5);x.stroke();});
-  x.setLineDash([]);
-
-  if(serie.length<2){
-    x.fillStyle='#B4C2C4';x.font='11px IBM Plex Mono, monospace';
-    x.fillText(S.fase==='idle'?'sin señal':'esperando lecturas…',2,h/2+4);
-    return;
-  }
-
-  const dx=w/(VENTANA-1), off=w-(serie.length-1)*dx;
-  const px=i=>off+i*dx;
-
-  const grad=x.createLinearGradient(0,0,0,h);
-  grad.addColorStop(0,trazo+'38');
-  grad.addColorStop(1,trazo+'00');
-  x.beginPath();
-  x.moveTo(px(0),h);
-  serie.forEach((p,i)=>x.lineTo(px(i),y(p.v)));
-  x.lineTo(px(serie.length-1),h);
-  x.closePath();x.fillStyle=grad;x.fill();
-
-  x.beginPath();
-  serie.forEach((p,i)=>{i?x.lineTo(px(i),y(p.v)):x.moveTo(px(i),y(p.v));});
-  x.strokeStyle=trazo;x.lineWidth=1.9;x.lineJoin='round';x.lineCap='round';x.stroke();
-
-  const ult=serie[serie.length-1];
-  x.beginPath();x.arc(px(serie.length-1),y(ult.v),3.2,0,Math.PI*2);
-  x.fillStyle='#fff';x.fill();
-  x.strokeStyle=trazo;x.lineWidth=2;x.stroke();
+/* Pie de tarjeta: mínimo, promedio y máximo de cada canal del grupo */
+function pintarPie(g){
+  const el=$('#ft-'+g.id); if(!el)return;
+  el.innerHTML=g.canales.map(id=>{
+    const c=ch(id), vs=serieSesion(id).map(p=>p.v);
+    if(!vs.length)return `<span>${c.unidad} — sin datos</span>`;
+    const prom=vs.reduce((a,b)=>a+b,0)/vs.length;
+    return `<span style="color:${c.color}">${Math.min.apply(null,vs).toFixed(c.dec)}`
+         + ` · ${prom.toFixed(c.dec)} · ${Math.max.apply(null,vs).toFixed(c.dec)} ${c.unidad}</span>`;
+  }).join('');
 }
+
 function escalaVisible(c,serie){
   let lo=Math.min(c.min,c.escala[0]), hi=Math.max(c.max,c.escala[1]);
   if(serie.length){
@@ -720,37 +756,101 @@ function escalaVisible(c,serie){
   return [lo-m,hi+m];
 }
 
+/*
+ * Dibuja todos los canales del grupo en el mismo lienzo. Cada uno
+ * usa su propia escala vertical, porque °C y % no son comparables
+ * en un mismo eje.
+ */
+function dibujar(g){
+  const cv=canvases[g.id]; if(!cv)return;
+  const dpr=window.devicePixelRatio||1;
+  const w=cv.clientWidth||300, h=cv.clientHeight||132;
+  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){
+    cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+  }
+  const x=cv.getContext('2d');
+  x.setTransform(dpr,0,0,dpr,0,0);
+  x.clearRect(0,0,w,h);
+
+  const unico=g.canales.length===1;
+  const series=g.canales.map(id=>({c:ch(id),s:S.datos[id].slice(-VENTANA)}));
+
+  if(!series.some(o=>o.s.length>=2)){
+    x.fillStyle='#B4C2C4';x.font='11px IBM Plex Mono, monospace';
+    x.fillText('esperando lecturas…',2,h/2+4);
+    return;
+  }
+
+  series.forEach(({c,s})=>{
+    const [lo,hi]=escalaVisible(c,s);
+    const y=v=>h-4-((v-lo)/(hi-lo))*(h-10);
+    const trazo=S.alarma[c.id]?'#DC3B52':c.color;
+
+    /* banda admitida: rellena solo si el grupo tiene un canal */
+    const yMax=y(Math.min(c.max,hi)), yMin=y(Math.max(c.min,lo));
+    if(unico){
+      x.fillStyle='#F3F6F7';
+      x.fillRect(0,yMax,w,Math.max(0,yMin-yMax));
+    }
+    x.strokeStyle=unico?'#DCE4E5':c.color+'44';
+    x.lineWidth=1;x.setLineDash([3,4]);
+    [yMax,yMin].forEach(yy=>{x.beginPath();x.moveTo(0,yy+.5);x.lineTo(w,yy+.5);x.stroke();});
+    x.setLineDash([]);
+
+    if(s.length<2)return;
+
+    const dx=w/(VENTANA-1), off=w-(s.length-1)*dx;
+    const px=i=>off+i*dx;
+
+    if(unico){
+      const grad=x.createLinearGradient(0,0,0,h);
+      grad.addColorStop(0,trazo+'38');
+      grad.addColorStop(1,trazo+'00');
+      x.beginPath();
+      x.moveTo(px(0),h);
+      s.forEach((p,i)=>x.lineTo(px(i),y(p.v)));
+      x.lineTo(px(s.length-1),h);
+      x.closePath();x.fillStyle=grad;x.fill();
+    }
+
+    x.beginPath();
+    s.forEach((p,i)=>{i?x.lineTo(px(i),y(p.v)):x.moveTo(px(i),y(p.v));});
+    x.strokeStyle=trazo;x.lineWidth=1.9;x.lineJoin='round';x.lineCap='round';x.stroke();
+
+    const ult=s[s.length-1];
+    x.beginPath();x.arc(px(s.length-1),y(ult.v),3.2,0,Math.PI*2);
+    x.fillStyle='#fff';x.fill();
+    x.strokeStyle=trazo;x.lineWidth=2;x.stroke();
+  });
+}
+
 /* ============ lecturas ============ */
 function registrar(id,valor,ts){
-  const c=ch(id);
+  const c=ch(id), g=grupoDe(id);
   S.datos[id].push({t:ts,v:valor});
   if(S.datos[id].length>5400)S.datos[id].shift();
   $('#v-'+id).textContent=valor.toFixed(c.dec);
-
-  const vs=serieSesion(id).map(p=>p.v);
-  const prom=vs.reduce((a,b)=>a+b,0)/vs.length;
-  $('#mn-'+id).textContent='mín '+Math.min.apply(null,vs).toFixed(c.dec);
-  $('#mx-'+id).textContent='máx '+Math.max.apply(null,vs).toFixed(c.dec);
-  $('#pr-'+id).textContent='prom '+prom.toFixed(c.dec);
+  pintarPie(g);
 
   const malo=valor<c.min||valor>c.max;
-  if(malo)S.fuera[id]++;
   S.streak[id]=malo?S.streak[id]+1:0;
 
   if(malo&&S.streak[id]>=DEBOUNCE&&!S.alarma[id]){
     S.alarma[id]=true;
-    $('#ch-'+id).classList.add('alarm');
     const dir=valor>c.max?'alta':'baja';
     log('alarma',`${c.nombre} ${dir}: ${valor.toFixed(c.dec)} ${c.unidad} (límite ${valor>c.max?c.max:c.min})`);
     beep(dir==='baja');banner();
   }else if(!malo&&S.alarma[id]){
     S.alarma[id]=false;
-    $('#ch-'+id).classList.remove('alarm');
     log('normal',`${c.nombre} normalizada: ${valor.toFixed(c.dec)} ${c.unidad}`);
     banner();
   }
+  /* La tarjeta se marca si cualquiera de sus canales está en alarma */
+  const tarjeta=$('#g-'+g.id);
+  if(tarjeta)tarjeta.classList.toggle('alarm',g.canales.some(k=>S.alarma[k]));
+
   if(S.alarma[id]&&Date.now()-S.ultimoBeep>6000){S.ultimoBeep=Date.now();beep(false);}
-  dibujar(c);
+  dibujar(g);
 }
 function banner(){
   const act=CH.filter(c=>S.alarma[c.id]);
@@ -761,50 +861,39 @@ function banner(){
   }else{b.classList.remove('on');$('#bannerTxt').textContent='';}
 }
 
-/* ============ simulación ============ */
-const sim={};
-CH.forEach(c=>{sim[c.id]={v:c.base,drift:0};});
-function lecturaSim(c){
-  const e=sim[c.id];
-  e.drift+=(Math.random()-0.5)*c.paso*0.4;
-  e.drift=Math.max(-c.paso*3,Math.min(c.paso*3,e.drift));
-  e.v+=e.drift+(c.base-e.v)*0.03+(Math.random()-0.5)*c.paso;
-  if(Math.random()<0.004)e.drift+=(Math.random()<0.5?-1:1)*c.paso*5;
-  return Math.round(e.v*100)/100;
-}
-function excursion(){
-  const c=CH[Math.floor(Math.random()*CH.length)];
-  const arriba=Math.random()<0.6;
-  sim[c.id].v=arriba?c.max+(c.max-c.min)*0.25+1:c.min-(c.max-c.min)*0.2-1;
-  sim[c.id].drift=0;
-  return c.nombre;
-}
-
 /* ============ supabase ============ */
-async function ultimaFila(base,key,tabla,dev){
-  const q=`${base}/rest/v1/${tabla}?device_id=eq.${encodeURIComponent(dev)}&order=ts.desc&limit=1`;
+function explicar(e){
+  if(e&&/failed to fetch|networkerror|load failed/i.test(e.message)){
+    return 'El navegador bloqueó la conexión con Supabase. Esto pasa al abrir la página '
+         + 'dentro del visor de artefactos; usa la dirección de Vercel.';
+  }
+  return e.message;
+}
+async function ultimaFila(base,key,tabla,sala){
+  const q=`${base}/rest/v1/${tabla}?sala=eq.${encodeURIComponent(sala)}&order=ts.desc&limit=1`;
   const r=await fetch(q,{headers:{apikey:key,Authorization:'Bearer '+key},cache:'no-store'});
   if(!r.ok)throw new Error(`Tabla ${tabla}: respondió ${r.status}.`);
   const j=await r.json();
   return j.length?j[0]:null;
 }
 async function lecturaSupabase(){
-  const base=$('#supaUrl').value.trim().replace(/\/+$/,'');
-  const key=$('#supaKey').value.trim();
-  const dev=$('#supaDev').value.trim();
-  if(!base||!key)throw new Error('Falta la URL del proyecto o la clave.');
+  const base=SUPA_URL, key=SUPA_KEY, sala=SALA;
 
   const [amb,luz,son]=await Promise.all([
-    ultimaFila(base,key,'ambiente',dev),
-    ultimaFila(base,key,'luz',dev),
-    ultimaFila(base,key,'sonido',dev)
+    ultimaFila(base,key,'ambiente',sala),
+    ultimaFila(base,key,'luz',sala),
+    ultimaFila(base,key,'sonido',sala)
   ]);
 
   S.tablas.ambiente = amb?Date.parse(amb.ts):null;
   S.tablas.luz      = luz?Date.parse(luz.ts):null;
   S.tablas.sonido   = son?Date.parse(son.ts):null;
 
-  if(!amb&&!luz&&!son)throw new Error('No hay filas para el device_id "'+dev+'".');
+  S.placas.ambiente = amb?amb.device_id:null;
+  S.placas.luz      = luz?luz.device_id:null;
+  S.placas.sonido   = son?son.device_id:null;
+
+  if(!amb&&!luz&&!son)throw new Error('No hay filas para la sala "'+sala+'".');
   return {ambiente:amb, luz:luz, sonido:son};
 }
 
@@ -815,49 +904,11 @@ const MAPA = {
   sonido  :[['ruido','db']]
 };
 
-/* ============ esp32 en red local ============ */
-async function lecturaLocal(){
-  let ip=$('#espIp').value.trim();
-  if(!ip)throw new Error('Falta la dirección IP de la ESP32.');
-  if(!/^https?:\/\//i.test(ip))ip='http://'+ip;
-  const ctrl=new AbortController();
-  const corte=setTimeout(()=>ctrl.abort(),2500);
-  try{
-    const r=await fetch(ip.replace(/\/+$/,'')+'/datos',{signal:ctrl.signal,cache:'no-store'});
-    if(!r.ok)throw new Error('La ESP32 respondió '+r.status+'.');
-    return await r.json();
-  }catch(e){
-    if(e.name==='AbortError')throw new Error('No respondió en 2,5 s. Verifica que esté en la misma red.');
-    throw new Error(e.message+' Si la página está en https, el navegador bloquea el acceso a una IP local: ábrela desde el archivo descargado.');
-  }finally{clearTimeout(corte);}
-}
-
 /* ============ ciclo ============ */
 function tick(){
   $('#clock').textContent=hhmmss(S.acumulado+(S.fase==='run'?Date.now()-S.t0:0));
 }
 async function ciclo(){
-  const ahora=Date.now();
-
-  if(S.fuente==='sim'){
-    CH.forEach(c=>registrar(c.id,lecturaSim(c),ahora));
-    S.frescura=ahora;
-    return;
-  }
-
-  if(S.fuente==='local'){
-    try{
-      const d=await lecturaLocal();
-      $('#espErr').textContent='';
-      CH.forEach(c=>{
-        const v=d[c.id]!==undefined&&d[c.id]!==null?Number(d[c.id]):null;
-        if(v!==null&&!isNaN(v))registrar(c.id,v,ahora);
-      });
-      S.frescura=ahora;
-    }catch(e){ $('#espErr').textContent=e.message; }
-    return;
-  }
-
   try{
     const d=await lecturaSupabase();
     $('#supaErr').textContent='';
@@ -884,7 +935,7 @@ async function ciclo(){
     const marcas=Object.values(S.tablas).filter(Boolean);
     if(marcas.length)S.frescura=Math.max.apply(null,marcas);
   }catch(e){
-    $('#supaErr').textContent=e.message;
+    $('#supaErr').textContent=explicar(e);
   }
 }
 
@@ -901,15 +952,16 @@ function actualizarDispositivo(){
   const pill=$('#devPill');
 
   let estado,texto;
-  if(S.fuente==='sim'){
-    estado='lento';texto='Modo simulación';
-  }else if(S.frescura===null){
+  if(S.frescura===null){
     estado='espera';texto='Esperando datos';
   }else{
-    const edad=Math.max(0,ahora-S.frescura);
-    if(edad<=10000){estado='ok';texto='Conectado';}
-    else if(edad<=60000){estado='lento';texto='Señal intermitente';}
-    else{estado='off';texto='Desconectado';}
+    const vistas=Object.values(S.tablas).filter(Boolean);
+    const masVieja=vistas.length?Math.min.apply(null,vistas):null;
+    const edad=masVieja?Math.max(0,ahora-masVieja):null;
+    const caidas=vistas.filter(m=>ahora-m>60000).length;
+    if(edad!==null&&edad<=15000){estado='ok';texto='Las 3 placas en línea';}
+    else if(caidas===vistas.length){estado='off';texto='Sin placas activas';}
+    else{estado='lento';texto=caidas+' placa'+(caidas===1?'':'s')+' sin reportar';}
   }
   pill.dataset.s=estado;
   $('#devTxt').textContent=texto;
@@ -920,20 +972,36 @@ function actualizarDispositivo(){
   }
   S.devEstado=estado;
 
-  const dev=$('#supaDev').value.trim()||'—';
-  const activas=['ambiente','luz','sonido'].filter(t=>S.tablas[t]&&ahora-S.tablas[t]<60000).length;
-  const ultima=S.frescura?edadTexto(Math.max(0,ahora-S.frescura)):'—';
+  const sala=SALA;
+  const PLACAS=[
+    {t:'ambiente', nombre:'Ambiente', mide:'temperatura y humedad'},
+    {t:'luz',      nombre:'Luz',      mide:'iluminación'},
+    {t:'sonido',   nombre:'Sonido',   mide:'ruido'}
+  ];
+  const enLinea=PLACAS.filter(p=>S.tablas[p.t]&&ahora-S.tablas[p.t]<15000).length;
+
+  /* Cada placa se evalúa por separado: si una se cae, las otras siguen */
+  const tarjetas=PLACAS.map(p=>{
+    const marca=S.tablas[p.t];
+    const edad=marca?Math.max(0,ahora-marca):null;
+    let cls='',est='sin datos';
+    if(edad!==null){
+      if(edad<=15000){cls='ok';est='en línea';}
+      else if(edad<=60000){cls='';est='intermitente';}
+      else{cls='off';est='caída';}
+    }
+    return `<div class="d ${cls}">
+      <small>${p.nombre} · ${est}</small>
+      <b class="big">${edadTexto(edad)}</b>
+      <span class="tag">${S.placas[p.t]||p.mide}</span>
+    </div>`;
+  }).join('');
 
   $('#devGrid').innerHTML=`
     <div class="d ${estado==='ok'?'ok':estado==='off'?'off':''}">
-      <small>Estado</small><b class="big">${texto}</b>
-      <span class="tag">${S.fuente==='supabase'?'vía Supabase':S.fuente==='local'?'red local':'sin hardware'}</span>
-    </div>
-    <div class="d"><small>Dispositivo</small><b>${dev}</b><span class="tag">identificador</span></div>
-    <div class="d"><small>Última lectura</small><b class="big">${ultima}</b><span class="tag">antigüedad</span></div>
-    <div class="d"><small>Tablas activas</small><b class="big">${activas} / 3</b>
-      <span class="tag">${['ambiente','luz','sonido'].map(t=>t+' '+edadTexto(S.tablas[t]?ahora-S.tablas[t]:null)).join(' · ')}</span>
-    </div>`;
+      <small>Sala ${sala}</small><b class="big">${enLinea} / 3</b>
+      <span class="tag">placas en línea</span>
+    </div>${tarjetas}`;
 }
 
 /* ============ log ============ */
@@ -966,7 +1034,7 @@ function fase(f){
 $('#btnStart').addEventListener('click',()=>{
   if(S.fase==='idle'){
     if(!$('#pNombre').value.trim()){$('#pNombre').focus();log('alarma','No se registró el nombre del paciente.');}
-    S.inicio=new Date();log('inicio','Sesión iniciada. Fuente: '+(S.fuente==='sim'?'simulación':'Supabase'));
+    S.inicio=new Date();log('inicio','Sesión iniciada. Sala '+SALA+'.');
   }else log('inicio','Sesión reanudada.');
   S.t0=Date.now();fase('run');
   beep(false);
@@ -979,7 +1047,8 @@ $('#btnPause').addEventListener('click',()=>{
 $('#btnEnd').addEventListener('click',()=>{
   if(S.fase==='run')S.acumulado+=Date.now()-S.t0;
   S.fin=new Date();fase('end');tick();
-  CH.forEach(c=>{S.alarma[c.id]=false;$('#ch-'+c.id).classList.remove('alarm');dibujar(c);});
+  CH.forEach(c=>{S.alarma[c.id]=false;});
+  GRUPOS.forEach(g=>{const t=$('#g-'+g.id);if(t)t.classList.remove('alarm');dibujar(g);});
   banner();log('fin','Sesión finalizada. Duración '+hhmmss(S.acumulado)+'.');
   resumen();
   vista('ses');
@@ -995,18 +1064,16 @@ $('#btnNote').addEventListener('click',()=>{
   const t=prompt('Nota para el registro:');
   if(t&&t.trim())log('nota',t.trim());
 });
-$('#btnTest').addEventListener('click',()=>{
-  if(S.fase!=='run'){log('nota','Inicia la sesión para probar las alertas.');return;}
-  log('nota','Excursión forzada en '+excursion().toLowerCase()+'.');
-});
 
 /* ============ pestañas ============ */
 function vista(v){
   $('#viewMon').hidden = (v!=='mon');
+  $('#viewAna').hidden = (v!=='ana');
   $('#viewSes').hidden = (v!=='ses');
   $$('#tabs button, #rail button[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   window.scrollTo({top:0,behavior:'smooth'});
-  if(v==='mon')CH.forEach(dibujar);   // el canvas oculto no tiene ancho
+  if(v==='mon')GRUPOS.forEach(dibujar);   // el canvas oculto no tiene ancho
+  if(v==='ana')cargarHistorial();
 }
 $('#tabs').addEventListener('click',e=>{
   const b=e.target.closest('button[data-v]');if(b)vista(b.dataset.v);
@@ -1201,23 +1268,10 @@ function pintarUmbrales(){
 $('#thrList').addEventListener('input',e=>{
   const i=e.target;if(i.tagName!=='INPUT')return;
   const c=ch(i.dataset.id);c[i.dataset.k]=parseFloat(i.value);
-  refrescarRangos();dibujar(c);guardar();
+  refrescarRangos();dibujar(grupoDe(c.id));guardar();
 });
 
 /* ============ fuente ============ */
-$('#srcSeg').addEventListener('click',e=>{
-  const b=e.target.closest('button');if(!b)return;
-  $$('#srcSeg button').forEach(x=>x.classList.toggle('on',x===b));
-  S.fuente=b.dataset.src;
-  $('#localCfg').style.display=S.fuente==='local'?'block':'none';
-  $('#supaCfg').style.display=S.fuente==='supabase'?'block':'none';
-  const textos={
-    sim:'Lecturas sintéticas cada segundo para probar alertas, gráficas y reporte sin hardware conectado.',
-    local:'Consulta http://IP/datos en la red local. Requiere abrir esta página desde el archivo descargado, no desde un enlace https.',
-    supabase:'La ESP32 escribe en las tablas ambiente, luz y sonido. Esta vista consulta el último registro de cada una.'
-  };
-  $('#srcHint').textContent=textos[S.fuente];
-});
 
 /* ============ gráfica del PDF ============ */
 function graficaCompleta(c){
@@ -1311,7 +1365,8 @@ function generarPDF(){
     ['Hora de inicio',S.inicio?hora(S.inicio):'—'],
     ['Hora de finalización',S.fin?hora(S.fin):'—'],
     ['Duración efectiva',hhmmss(S.acumulado)],
-    ['Fuente de datos',S.fuente==='sim'?'Simulación':'ESP32 vía Supabase']
+    ['Sala',SALA],
+    ['Origen de los datos','Tres ESP32 vía Supabase']
   ],{0:{cellWidth:150,fontStyle:'bold',textColor:gris}});
 
   const desc=$('#procDesc').value.trim();
@@ -1384,6 +1439,354 @@ function generarPDF(){
   log('nota','Reporte PDF generado.');
 }
 
+
+/* ===================================================================
+   ANÁLISIS: histórico, tendencia y distribución
+   =================================================================== */
+
+const HIST = {temp:[],hum:[],lux:[],ruido:[]};
+let anaMinutos = 15;
+
+/* Trae el histórico de una tabla desde una marca de tiempo */
+async function traerRango(base,key,tabla,sala,desde){
+  const q=`${base}/rest/v1/${tabla}?sala=eq.${encodeURIComponent(sala)}`
+        + `&ts=gte.${encodeURIComponent(desde)}&order=ts.asc&limit=5000`;
+  const r=await fetch(q,{headers:{apikey:key,Authorization:'Bearer '+key},cache:'no-store'});
+  if(!r.ok)throw new Error(`Tabla ${tabla}: respondió ${r.status}.`);
+  return await r.json();
+}
+
+async function cargarHistorial(){
+  const base=SUPA_URL, key=SUPA_KEY, sala=SALA;
+
+  const desde=new Date(Date.now()-anaMinutos*60000).toISOString();
+  $('#anaEstado').textContent='Consultando…';
+  $('#anaErr').textContent='';
+
+  try{
+    const [amb,luz,son]=await Promise.all([
+      traerRango(base,key,'ambiente',sala,desde),
+      traerRango(base,key,'luz',sala,desde),
+      traerRango(base,key,'sonido',sala,desde)
+    ]);
+
+    HIST.temp  = amb.map(f=>({t:Date.parse(f.ts),v:Number(f.temp)})).filter(p=>!isNaN(p.v));
+    HIST.hum   = amb.map(f=>({t:Date.parse(f.ts),v:Number(f.hum )})).filter(p=>!isNaN(p.v));
+    HIST.lux   = luz.map(f=>({t:Date.parse(f.ts),v:Number(f.lux )})).filter(p=>!isNaN(p.v));
+    HIST.ruido = son.map(f=>({t:Date.parse(f.ts),v:Number(f.db  )})).filter(p=>!isNaN(p.v));
+
+    const total=CH.reduce((a,c)=>a+HIST[c.id].length,0);
+    $('#anaInfo').textContent=total+' registros';
+    $('#anaEstado').textContent='Actualizado a las '+hora(new Date());
+    pintarAnalisis();
+  }catch(e){
+    $('#anaErr').textContent=explicar(e);
+    $('#anaEstado').textContent='';
+    pintarAnalisis();
+  }
+}
+
+/* ---------- estadística ---------- */
+function resumenSerie(id){
+  const c=ch(id), s=HIST[id];
+  if(!s.length)return null;
+  const vs=s.map(p=>p.v).slice().sort((a,b)=>a-b);
+  const n=vs.length;
+  const media=vs.reduce((a,b)=>a+b,0)/n;
+  const mediana=n%2?vs[(n-1)/2]:(vs[n/2-1]+vs[n/2])/2;
+  const varianza=vs.reduce((a,v)=>a+(v-media)*(v-media),0)/n;
+  const p95=vs[Math.min(n-1,Math.floor(n*0.95))];
+  const fuera=vs.filter(v=>v<c.min||v>c.max).length;
+
+  /* Pendiente por regresión lineal, expresada en unidades por hora */
+  let pendiente=0;
+  if(n>2){
+    const t0=s[0].t;
+    const xs=s.map(p=>(p.t-t0)/3600000);
+    const mx=xs.reduce((a,b)=>a+b,0)/n;
+    const my=s.reduce((a,p)=>a+p.v,0)/n;
+    let num=0,den=0;
+    for(let i=0;i<n;i++){num+=(xs[i]-mx)*(s[i].v-my);den+=(xs[i]-mx)*(xs[i]-mx);}
+    pendiente=den?num/den:0;
+  }
+
+  return{n:n,min:vs[0],max:vs[n-1],media:media,mediana:mediana,
+         desv:Math.sqrt(varianza),p95:p95,
+         fuera:fuera,pct:(fuera/n)*100,pendiente:pendiente,
+         dur:(s[n-1].t-s[0].t)/60000};
+}
+
+/* Media móvil centrada */
+function mediaMovil(serie,ventana){
+  const out=[],mitad=Math.floor(ventana/2);
+  for(let i=0;i<serie.length;i++){
+    let suma=0,cuenta=0;
+    for(let j=Math.max(0,i-mitad);j<=Math.min(serie.length-1,i+mitad);j++){
+      suma+=serie[j].v;cuenta++;
+    }
+    out.push({t:serie[i].t,v:suma/cuenta});
+  }
+  return out;
+}
+
+/* ---------- dibujo ---------- */
+function prepararCanvas(cv){
+  const dpr=window.devicePixelRatio||1;
+  const w=cv.clientWidth||600, hh=cv.clientHeight||200;
+  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(hh*dpr)){
+    cv.width=Math.round(w*dpr);cv.height=Math.round(hh*dpr);
+  }
+  const x=cv.getContext('2d');
+  x.setTransform(dpr,0,0,dpr,0,0);
+  x.clearRect(0,0,w,hh);
+  return {x:x,w:w,h:hh};
+}
+
+function dibujarAnalisis(cv,g){
+  const {x,w,h}=prepararCanvas(cv);
+  const pd={l:46,r:46,t:10,b:22};
+  const canales=g.canales.filter(id=>HIST[id].length>=2);
+
+  if(!canales.length){
+    x.fillStyle='#93A5A8';x.font='12px IBM Plex Sans, sans-serif';
+    x.fillText('Sin datos en esta ventana',pd.l,h/2);
+    return;
+  }
+
+  /* eje de tiempo común a todos los canales del grupo */
+  let t0=Infinity,t1=-Infinity;
+  canales.forEach(id=>{
+    const s=HIST[id];
+    t0=Math.min(t0,s[0].t); t1=Math.max(t1,s[s.length-1].t);
+  });
+  const X=t=>pd.l+((t-t0)/Math.max(1,t1-t0))*(w-pd.l-pd.r);
+
+  canales.forEach((id,idx)=>{
+    const c=ch(id), serie=HIST[id];
+    const vs=serie.map(p=>p.v);
+    let lo=Math.min(c.min,Math.min.apply(null,vs));
+    let hi=Math.max(c.max,Math.max.apply(null,vs));
+    const m=(hi-lo)*0.12||1; lo-=m; hi+=m;
+    const Y=v=>h-pd.b-((v-lo)/(hi-lo))*(h-pd.t-pd.b);
+    const izq=idx===0;
+
+    /* rejilla solo del primer canal, para no ensuciar */
+    if(izq){
+      x.strokeStyle='#EFF3F4';x.lineWidth=1;
+      for(let i=0;i<=4;i++){
+        const yy=Math.round(Y(lo+((hi-lo)/4)*i))+0.5;
+        x.beginPath();x.moveTo(pd.l,yy);x.lineTo(w-pd.r,yy);x.stroke();
+      }
+    }
+    /* escala vertical propia: la primera a la izquierda, la segunda a la derecha */
+    x.fillStyle=c.color;x.font='10px IBM Plex Mono, monospace';
+    for(let i=0;i<=4;i++){
+      const v=lo+((hi-lo)/4)*i, yy=Math.round(Y(v))+3;
+      const et=v.toFixed(c.dec);
+      x.fillText(et, izq?4:w-pd.r+6, yy);
+    }
+
+    /* banda admitida y límites */
+    const yMax=Y(Math.min(c.max,hi)), yMin=Y(Math.max(c.min,lo));
+    if(canales.length===1){
+      x.fillStyle='rgba(15,158,142,.07)';
+      x.fillRect(pd.l,yMax,w-pd.l-pd.r,Math.max(0,yMin-yMax));
+    }
+    x.strokeStyle=c.color+'55';x.setLineDash([5,4]);
+    [yMax,yMin].forEach(yy=>{x.beginPath();x.moveTo(pd.l,yy+0.5);x.lineTo(w-pd.r,yy+0.5);x.stroke();});
+    x.setLineDash([]);
+
+    /* puntos fuera de rango */
+    x.fillStyle='rgba(220,59,82,.5)';
+    serie.forEach(p=>{
+      if(p.v<c.min||p.v>c.max){x.beginPath();x.arc(X(p.t),Y(p.v),2,0,Math.PI*2);x.fill();}
+    });
+
+    /* lectura cruda */
+    x.beginPath();
+    serie.forEach((p,i)=>{i?x.lineTo(X(p.t),Y(p.v)):x.moveTo(X(p.t),Y(p.v));});
+    x.strokeStyle=c.color+'55';x.lineWidth=1.2;x.lineJoin='round';x.stroke();
+
+    /* media móvil */
+    const mm=mediaMovil(serie,Math.max(3,Math.round(serie.length/25)));
+    x.beginPath();
+    mm.forEach((p,i)=>{i?x.lineTo(X(p.t),Y(p.v)):x.moveTo(X(p.t),Y(p.v));});
+    x.strokeStyle=c.color;x.lineWidth=2.2;x.stroke();
+
+    /* tendencia */
+    const r=resumenSerie(id);
+    if(r&&r.n>2){
+      const horas=(serie[serie.length-1].t-serie[0].t)/3600000;
+      x.beginPath();
+      x.moveTo(X(serie[0].t), Y(r.media-(r.pendiente*horas)/2));
+      x.lineTo(X(serie[serie.length-1].t), Y(r.media+(r.pendiente*horas)/2));
+      x.strokeStyle='#16292C';x.lineWidth=1.3;x.setLineDash([7,5]);x.stroke();x.setLineDash([]);
+    }
+  });
+
+  x.fillStyle='#93A5A8';x.font='10px IBM Plex Mono, monospace';
+  x.fillText(hora(new Date(t0)),pd.l,h-6);
+  const fin=hora(new Date(t1));
+  x.fillText(fin,w-pd.r-x.measureText(fin).width,h-6);
+}
+
+function dibujarHistograma(cv,id){
+  const c=ch(id), serie=HIST[id];
+  const {x,w,h}=prepararCanvas(cv);
+  if(serie.length<2)return;
+
+  const vs=serie.map(p=>p.v);
+  const lo=Math.min.apply(null,vs), hi=Math.max.apply(null,vs);
+  const rango=hi-lo||1;
+  const nb=14, bins=new Array(nb).fill(0);
+  vs.forEach(v=>{
+    let i=Math.floor(((v-lo)/rango)*nb);
+    if(i>=nb)i=nb-1; if(i<0)i=0;
+    bins[i]++;
+  });
+  const pico=Math.max.apply(null,bins)||1;
+  const pd={l:4,r:4,t:16,b:18};
+  const bw=(w-pd.l-pd.r)/nb;
+
+  x.fillStyle='#93A5A8';x.font='10px IBM Plex Sans, sans-serif';
+  x.fillText('Distribución',pd.l,10);
+
+  bins.forEach((n,i)=>{
+    const centro=lo+rango*((i+0.5)/nb);
+    const alto=(n/pico)*(h-pd.t-pd.b);
+    const fuera=centro<c.min||centro>c.max;
+    x.fillStyle = fuera ? 'rgba(220,59,82,.55)' : c.color+'AA';
+    x.fillRect(pd.l+i*bw+1, h-pd.b-alto, bw-2, alto);
+  });
+
+  x.strokeStyle='#E5EBEC';x.beginPath();
+  x.moveTo(pd.l,h-pd.b+0.5);x.lineTo(w-pd.r,h-pd.b+0.5);x.stroke();
+
+  x.fillStyle='#93A5A8';x.font='9.5px IBM Plex Mono, monospace';
+  x.fillText(lo.toFixed(c.dec),pd.l,h-5);
+  const et=hi.toFixed(c.dec);
+  x.fillText(et,w-pd.r-x.measureText(et).width,h-5);
+}
+
+/* ---------- render ---------- */
+function flecha(p,dec){
+  if(Math.abs(p)<Math.pow(10,-dec))return '→ estable';
+  return (p>0?'↑ +':'↓ ')+p.toFixed(dec+1)+'/h';
+}
+
+function pintarAnalisis(){
+  $('#anaCards').innerHTML=GRUPOS.map(g=>`
+    <div class="card ana">
+      <h2>${g.nombre} <span class="count" id="an-n-${g.id}">—</span></h2>
+      <div class="body">
+        <div class="leyenda">
+          ${g.canales.map(id=>{const c=ch(id);
+            return `<span><i style="background:${c.color}"></i>${c.nombre}</span>`;}).join('')}
+          <span><i style="background:#16292C"></i>tendencia</span>
+          <span><i style="background:#DC3B52"></i>fuera de rango</span>
+        </div>
+        <div class="ana-row">
+          <canvas class="ana-serie" id="an-s-${g.id}"></canvas>
+          <div class="ana-side">
+            ${g.canales.map(id=>`
+              <canvas class="ana-hist" id="an-h-${id}"></canvas>
+              <div class="ana-stats" id="an-e-${id}"></div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  GRUPOS.forEach(g=>{
+    const total=g.canales.reduce((a,id)=>a+HIST[id].length,0);
+    $('#an-n-'+g.id).textContent = total ? total+' lecturas' : 'sin datos';
+    dibujarAnalisis($('#an-s-'+g.id),g);
+
+    g.canales.forEach(id=>{
+      const c=ch(id), r=resumenSerie(id);
+      if(r){
+        $('#an-e-'+id).innerHTML=`
+          <div style="grid-column:1/-1"><small>${c.nombre}</small></div>
+          <div><small>Media</small><b>${r.media.toFixed(c.dec)}</b></div>
+          <div><small>Mediana</small><b>${r.mediana.toFixed(c.dec)}</b></div>
+          <div><small>Desv.</small><b>${r.desv.toFixed(c.dec+1)}</b></div>
+          <div><small>Mínimo</small><b>${r.min.toFixed(c.dec)}</b></div>
+          <div><small>Máximo</small><b>${r.max.toFixed(c.dec)}</b></div>
+          <div><small>P95</small><b>${r.p95.toFixed(c.dec)}</b></div>
+          <div><small>Fuera</small><b style="color:${r.pct>0?'var(--alarm)':'var(--accent)'}">${r.pct.toFixed(1)}%</b></div>
+          <div><small>Tendencia</small><b>${flecha(r.pendiente,c.dec)}</b></div>
+          <div><small>Ventana</small><b>${r.dur.toFixed(0)} min</b></div>`;
+      }else{
+        $('#an-e-'+id).innerHTML=`<div style="grid-column:1/-1"><small>${c.nombre}: sin registros</small></div>`;
+      }
+      dibujarHistograma($('#an-h-'+id),id);
+    });
+  });
+
+  $('#anaTabla').innerHTML=`
+    <thead><tr><th>Variable</th><th>n</th><th>Media</th><th>Mediana</th><th>Desv.</th>
+    <th>Mín</th><th>Máx</th><th>P95</th><th>Rango admitido</th><th>Fuera</th><th>Tendencia</th></tr></thead>
+    <tbody>${CH.map(c=>{
+      const r=resumenSerie(c.id);
+      if(!r)return `<tr><td>${c.nombre}</td><td colspan="10">sin datos</td></tr>`;
+      return `<tr>
+        <td>${c.nombre}</td><td>${r.n}</td>
+        <td>${r.media.toFixed(c.dec)}</td><td>${r.mediana.toFixed(c.dec)}</td>
+        <td>${r.desv.toFixed(c.dec+1)}</td>
+        <td>${r.min.toFixed(c.dec)}</td><td>${r.max.toFixed(c.dec)}</td>
+        <td>${r.p95.toFixed(c.dec)}</td>
+        <td>${c.min} – ${c.max} ${c.unidad}</td>
+        <td class="${r.pct>0?'mal':'bien'}">${r.pct.toFixed(1)}%</td>
+        <td>${flecha(r.pendiente,c.dec)}</td></tr>`;
+    }).join('')}</tbody>`;
+}
+
+$('#anaSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  $$('#anaSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  anaMinutos=+b.dataset.min;
+  cargarHistorial();
+});
+$('#btnAna').addEventListener('click',cargarHistorial);
+window.addEventListener('resize',()=>{if(!$('#viewAna').hidden)pintarAnalisis();});
+
+
+/* Rellena las gráficas en vivo con los últimos minutos, para que
+   no arranquen vacías al abrir la página. */
+async function sembrarEnVivo(){
+  const base=SUPA_URL, key=SUPA_KEY, sala=SALA;
+
+  const desde=new Date(Date.now()-10*60000).toISOString();
+  try{
+    const [amb,luz,son]=await Promise.all([
+      traerRango(base,key,'ambiente',sala,desde),
+      traerRango(base,key,'luz',sala,desde),
+      traerRango(base,key,'sonido',sala,desde)
+    ]);
+
+    const sembrar=(canal,filas,col)=>{
+      filas.forEach(f=>{
+        const v=Number(f[col]);
+        if(!isNaN(v))S.datos[canal].push({t:Date.parse(f.ts),v:v});
+      });
+    };
+    sembrar('temp',amb,'temp');
+    sembrar('hum', amb,'hum');
+    sembrar('lux', luz,'lux');
+    sembrar('ruido',son,'db');
+
+    /* Marcar lo ya sembrado para que el ciclo en vivo no lo repita */
+    if(amb.length)S.tsRegistrado.ambiente=Date.parse(amb[amb.length-1].ts);
+    if(luz.length)S.tsRegistrado.luz     =Date.parse(luz[luz.length-1].ts);
+    if(son.length)S.tsRegistrado.sonido  =Date.parse(son[son.length-1].ts);
+
+    CH.forEach(c=>{
+      const s=S.datos[c.id];
+      if(s.length)$('#v-'+c.id).textContent=s[s.length-1].v.toFixed(c.dec);
+    });
+    GRUPOS.forEach(g=>{pintarPie(g);dibujar(g);});
+  }catch(e){/* si falla, las gráficas simplemente arrancan vacías */}
+}
+
 /* ============ arranque ============ */
 construirCanales();
 pintarUmbrales();
@@ -1394,6 +1797,7 @@ setInterval(tick,250);
 setInterval(ciclo,1000);
 setInterval(actualizarDispositivo,1000);
 ciclo();
+sembrarEnVivo();
 })();
 </script>
 </body>
