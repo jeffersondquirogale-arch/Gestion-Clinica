@@ -325,7 +325,8 @@ canvas.ana-hist{display:block;width:100%;height:120px;}
 .dev-grid .d.ok b{color:var(--accent);}
 
 /* ===== varios ===== */
-.seg{display:flex;background:var(--line-soft);border-radius:9px;padding:3px;gap:3px;}
+.seg{display:flex;flex-wrap:wrap;background:var(--line-soft);border-radius:9px;padding:3px;gap:3px;}
+.seg button{min-width:64px;}
 .seg button{flex:1;background:transparent;border:none;padding:7px;cursor:pointer;color:var(--ink-2);border-radius:7px;font-size:12.5px;}
 .seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(20,45,50,.09);}
 .hint{font-size:11.5px;color:var(--ink-3);line-height:1.5;}
@@ -409,13 +410,15 @@ canvas.ana-hist{display:block;width:100%;height:120px;}
         <p class="eyebrow">Ventana de análisis</p>
         <div class="card">
           <h2>Datos acumulados <span class="count" id="anaInfo">—</span></h2>
-          <p class="sub">Consulta el histórico guardado en Supabase para la sala configurada.</p>
+          <p class="sub">Consulta el histórico guardado en Supabase. La opción <b>Todo</b> trae los últimos 5.000 registros de cada tabla, sin importar cuándo se tomaron.</p>
           <div class="body">
-            <div class="seg" id="anaSeg" style="max-width:480px">
-              <button data-min="15" class="on">15 min</button>
-              <button data-min="60">1 h</button>
+            <div class="seg" id="anaSeg">
+              <button data-min="15">15 min</button>
+              <button data-min="60" class="on">1 h</button>
               <button data-min="360">6 h</button>
               <button data-min="1440">24 h</button>
+              <button data-min="10080">7 días</button>
+              <button data-min="0">Todo</button>
             </div>
             <div class="toolbar">
               <button class="btn sm" id="btnAna">Actualizar</button>
@@ -1445,21 +1448,26 @@ function generarPDF(){
    =================================================================== */
 
 const HIST = {temp:[],hum:[],lux:[],ruido:[]};
-let anaMinutos = 15;
+let anaMinutos = 60;
 
 /* Trae el histórico de una tabla desde una marca de tiempo */
 async function traerRango(base,key,tabla,sala,desde){
-  const q=`${base}/rest/v1/${tabla}?sala=eq.${encodeURIComponent(sala)}`
-        + `&ts=gte.${encodeURIComponent(desde)}&order=ts.asc&limit=5000`;
+  /* Sin fecha de corte se piden los últimos 5.000 y se invierten,
+     así el historial completo no depende de cuándo empezó a registrar. */
+  const filtro = desde
+    ? `&ts=gte.${encodeURIComponent(desde)}&order=ts.asc&limit=5000`
+    : `&order=ts.desc&limit=5000`;
+  const q=`${base}/rest/v1/${tabla}?sala=eq.${encodeURIComponent(sala)}${filtro}`;
   const r=await fetch(q,{headers:{apikey:key,Authorization:'Bearer '+key},cache:'no-store'});
   if(!r.ok)throw new Error(`Tabla ${tabla}: respondió ${r.status}.`);
-  return await r.json();
+  const j=await r.json();
+  return desde ? j : j.reverse();
 }
 
 async function cargarHistorial(){
   const base=SUPA_URL, key=SUPA_KEY, sala=SALA;
 
-  const desde=new Date(Date.now()-anaMinutos*60000).toISOString();
+  const desde = anaMinutos ? new Date(Date.now()-anaMinutos*60000).toISOString() : null;
   $('#anaEstado').textContent='Consultando…';
   $('#anaErr').textContent='';
 
@@ -1476,8 +1484,19 @@ async function cargarHistorial(){
     HIST.ruido = son.map(f=>({t:Date.parse(f.ts),v:Number(f.db  )})).filter(p=>!isNaN(p.v));
 
     const total=CH.reduce((a,c)=>a+HIST[c.id].length,0);
-    $('#anaInfo').textContent=total+' registros';
-    $('#anaEstado').textContent='Actualizado a las '+hora(new Date());
+    $('#anaInfo').textContent=total.toLocaleString('es-CO')+' registros';
+
+    const marcas=CH.flatMap(c=>HIST[c.id].length?[HIST[c.id][0].t,HIST[c.id][HIST[c.id].length-1].t]:[]);
+    if(marcas.length){
+      const d0=new Date(Math.min.apply(null,marcas)), d1=new Date(Math.max.apply(null,marcas));
+      const dias=(d1-d0)/86400000;
+      const etiqueta = dias>=1
+        ? `${fecha(d0)} ${hora(d0)} — ${fecha(d1)} ${hora(d1)} · ${dias.toFixed(1)} días`
+        : `${hora(d0)} — ${hora(d1)} · ${((d1-d0)/60000).toFixed(0)} min`;
+      $('#anaEstado').textContent=etiqueta;
+    }else{
+      $('#anaEstado').textContent='Sin registros en esta ventana.';
+    }
     pintarAnalisis();
   }catch(e){
     $('#anaErr').textContent=explicar(e);
@@ -1514,6 +1533,20 @@ function resumenSerie(id){
          desv:Math.sqrt(varianza),p95:p95,
          fuera:fuera,pct:(fuera/n)*100,pendiente:pendiente,
          dur:(s[n-1].t-s[0].t)/60000};
+}
+
+/* Con miles de puntos no tiene sentido dibujar uno por píxel:
+   se agrupan en cubos y se promedia cada uno. */
+function reducir(serie,maximo){
+  if(serie.length<=maximo)return serie;
+  const paso=serie.length/maximo, out=[];
+  for(let i=0;i<maximo;i++){
+    const a=Math.floor(i*paso), b=Math.floor((i+1)*paso);
+    let suma=0,n=0;
+    for(let j=a;j<b&&j<serie.length;j++){suma+=serie[j].v;n++;}
+    if(n)out.push({t:serie[Math.floor((a+b)/2)].t, v:suma/n});
+  }
+  return out;
 }
 
 /* Media móvil centrada */
@@ -1562,7 +1595,7 @@ function dibujarAnalisis(cv,g){
   const X=t=>pd.l+((t-t0)/Math.max(1,t1-t0))*(w-pd.l-pd.r);
 
   canales.forEach((id,idx)=>{
-    const c=ch(id), serie=HIST[id];
+    const c=ch(id), serie=reducir(HIST[id],1200);
     const vs=serie.map(p=>p.v);
     let lo=Math.min(c.min,Math.min.apply(null,vs));
     let hi=Math.max(c.max,Math.max.apply(null,vs));
@@ -1598,9 +1631,13 @@ function dibujarAnalisis(cv,g){
 
     /* puntos fuera de rango */
     x.fillStyle='rgba(220,59,82,.5)';
-    serie.forEach(p=>{
-      if(p.v<c.min||p.v>c.max){x.beginPath();x.arc(X(p.t),Y(p.v),2,0,Math.PI*2);x.fill();}
-    });
+    let marcados=0;
+    for(const p of HIST[id]){
+      if(p.v<c.min||p.v>c.max){
+        x.beginPath();x.arc(X(p.t),Y(p.v),2,0,Math.PI*2);x.fill();
+        if(++marcados>4000)break;
+      }
+    }
 
     /* lectura cruda */
     x.beginPath();
