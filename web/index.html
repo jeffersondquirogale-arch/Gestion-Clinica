@@ -39,6 +39,27 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
 ::selection{background:var(--accent-soft);}
 
+/* ===== acceso ===== */
+#login{
+  position:fixed;inset:0;z-index:100;background:var(--canvas);
+  display:grid;place-items:center;padding:24px;
+}
+#login.oculto{display:none;}
+.login-box{
+  background:var(--card);border:1px solid var(--line);border-radius:16px;
+  box-shadow:0 2px 4px rgba(20,45,50,.06), 0 24px 48px -24px rgba(20,45,50,.35);
+  padding:32px 30px;width:100%;max-width:340px;
+}
+.login-box .mark.lg{
+  width:46px;height:46px;border-radius:12px;background:var(--accent);
+  display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;
+  margin-bottom:18px;
+}
+.login-box h1{margin:0;font-size:19px;font-weight:600;letter-spacing:-.01em;}
+.login-box p{margin:2px 0 22px;font-size:12.5px;color:var(--ink-3);}
+.login-box .f{margin-bottom:14px;}
+.login-box .err{min-height:16px;}
+
 /* ===== rail ===== */
 #rail{
   position:fixed;left:0;top:0;bottom:0;width:62px;background:var(--card);
@@ -346,12 +367,25 @@ canvas.ana-hist{display:block;width:100%;height:120px;}
 </head>
 <body>
 
+<div id="login">
+  <form class="login-box" id="loginForm" autocomplete="off">
+    <div class="mark lg">SQ</div>
+    <h1>SIMQ</h1>
+    <p>Monitoreo de sala de cirugía</p>
+    <label class="f"><span>Usuario</span><input type="text" id="usr" autocomplete="username"></label>
+    <label class="f"><span>Contraseña</span><input type="password" id="pwd" autocomplete="current-password"></label>
+    <button class="btn primary" type="submit" style="width:100%">Entrar</button>
+    <div class="err" id="loginErr"></div>
+  </form>
+</div>
+
 <nav id="rail" aria-label="Vistas">
   <div class="mark">SQ</div>
   <button data-v="mon" class="on" title="Monitoreo" aria-label="Monitoreo"><svg viewBox="0 0 24 24"><path d="M3 15l4-5 4 4 4-7 6 8"/></svg></button>
   <button data-v="ana" title="Análisis" aria-label="Análisis"><svg viewBox="0 0 24 24"><path d="M4 20V10M9.5 20V4M15 20v-7M20.5 20V7"/></svg></button>
   <button data-v="ses" title="Sesión" aria-label="Sesión"><svg viewBox="0 0 24 24"><rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg></button>
   <div class="spacer"></div>
+  <button id="btnSalir" title="Cerrar sesión" aria-label="Cerrar sesión"><svg viewBox="0 0 24 24"><path d="M14 7V5a1.5 1.5 0 00-1.5-1.5h-6A1.5 1.5 0 005 5v14a1.5 1.5 0 001.5 1.5h6A1.5 1.5 0 0014 19v-2"/><path d="M10 12h10m0 0l-3-3m3 3l-3 3"/></svg></button>
   <button id="btnMute" title="Silenciar alarmas" aria-label="Silenciar alarmas"><svg viewBox="0 0 24 24"><path d="M6 9.5h3l4-3.2v11.4l-4-3.2H6z"/><path id="mIcon" d="M16.5 9.4a4 4 0 010 5.2"/></svg></button>
 </nav>
 
@@ -1990,17 +2024,72 @@ async function sembrarEnVivo(){
   }catch(e){/* si falla, las gráficas simplemente arrancan vacías */}
 }
 
+/* ============ acceso ============ */
+/*
+ * Control de acceso del lado del cliente: sirve para que la pantalla
+ * no quede abierta a cualquiera que pase, pero NO es seguridad real.
+ * Las credenciales viajan en el HTML y se ven en el código fuente.
+ * Para datos de pacientes hay que migrar a Supabase Auth.
+ */
+const USUARIO = 'Yuri';
+const CLAVE   = '123456789';
+
+let arrancado = false;
+
+function arrancar(){
+  if(arrancado)return;
+  arrancado = true;
+
+  construirCanales();
+  pintarUmbrales();
+  pintarPersonal();pintarEquipos();pintarInsumos();pintarPasos();
+  fase('idle');
+  actualizarDispositivo();
+
+  setInterval(tick,250);
+  setInterval(ciclo,1000);
+  setInterval(actualizarDispositivo,1000);
+  ciclo();
+  sembrarEnVivo();
+}
+
+function entrar(){
+  $('#login').classList.add('oculto');
+  try{sessionStorage.setItem('simq.sesion','1');}catch(e){/* sin almacenamiento */}
+  arrancar();
+}
+
+$('#loginForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const u=$('#usr').value.trim(), p=$('#pwd').value;
+  if(u===USUARIO && p===CLAVE){
+    $('#loginErr').textContent='';
+    entrar();
+  }else{
+    $('#loginErr').textContent='Usuario o contraseña incorrectos.';
+    $('#pwd').value='';
+    $('#pwd').focus();
+  }
+});
+
+$('#btnSalir').addEventListener('click',()=>{
+  if(S.fase==='run' && !confirm('Hay una sesión en curso. ¿Cerrar de todos modos?'))return;
+  try{sessionStorage.removeItem('simq.sesion');}catch(e){/* sin almacenamiento */}
+  location.reload();
+});
+
 /* ============ arranque ============ */
-construirCanales();
-pintarUmbrales();
-pintarPersonal();pintarEquipos();pintarInsumos();pintarPasos();
-fase('idle');
-actualizarDispositivo();
-setInterval(tick,250);
-setInterval(ciclo,1000);
-setInterval(actualizarDispositivo,1000);
-ciclo();
-sembrarEnVivo();
+/* La sesión dura mientras la pestaña esté abierta */
+let yaEntro=false;
+try{yaEntro = sessionStorage.getItem('simq.sesion')==='1';}catch(e){/* sin almacenamiento */}
+
+if(yaEntro){
+  $('#login').classList.add('oculto');
+  arrancar();
+}else{
+  $('#usr').focus();
+}
+
 })();
 </script>
 </body>
