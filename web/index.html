@@ -148,6 +148,10 @@ main{padding:20px 22px 40px;max-width:1900px;margin:0 auto;}
 .ch-vals .v span{font-family:var(--mono);font-variant-numeric:tabular-nums;
   font-size:32px;font-weight:500;line-height:1.1;letter-spacing:-.025em;color:var(--c);}
 .ch-vals .v i{font-style:normal;font-size:13px;color:var(--ink-3);}
+.ch-vals .v.bin span{font-family:var(--sans);font-size:26px;font-weight:600;letter-spacing:0;}
+.thr.bin{grid-template-columns:1fr auto;}
+.chk{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2);cursor:pointer;}
+.chk input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
 .ch-vals .v small{display:block;width:100%;font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-top:2px;}
 .ch.alarm .ch-vals .v span{color:var(--alarm);}
 .ch-foot{gap:16px;flex-wrap:wrap;}
@@ -542,7 +546,7 @@ canvas.ana-hist{display:block;width:100%;height:120px;}
 
           <div class="col">
             <section class="card">
-              <h2>Umbrales de alerta</h2>
+              <h2>Umbrales de alerta <button class="btn ghost sm sp" id="btnThrReset">Restaurar</button></h2>
               <div class="body">
                 <div class="thr-head"><span>Variable</span><span>Mín</span><span>Máx</span></div>
                 <div id="thrList"></div>
@@ -588,7 +592,7 @@ const SALA     = 'quirofano-1';
 const CH = [
   {id:'temp', nombre:'Temperatura',      unidad:'°C',  color:'#E2823C', dec:1, min:18,  max:24,  escala:[14,30]},
   {id:'hum',  nombre:'Humedad relativa', unidad:'%',   color:'#2E8FD4', dec:0, min:30,  max:60,  escala:[15,80]},
-  {id:'lux',  nombre:'Iluminación',      unidad:'lux', color:'#CB9A17', dec:0, min:300, max:500,  escala:[0,900]},
+  {id:'lux',  nombre:'Iluminación',      unidad:'',    color:'#CB9A17', dec:0, min:300, max:500,  escala:[0,1], binario:true, alertarSinLuz:true},
   {id:'ruido',nombre:'Ruido',            unidad:'dB',  color:'#C94263', dec:1, min:0,   max:45,   escala:[25,95]}
 ];
 const VENTANA = 150;
@@ -706,6 +710,9 @@ const GRUPOS = [
 ];
 const grupoDe = id => GRUPOS.find(g=>g.canales.includes(id));
 
+/* El módulo LDR solo distingue dos estados, no mide lux */
+const hayLuz = v => v >= 250;
+
 const canvases={};
 function construirCanales(){
   $('#channels').innerHTML=GRUPOS.map(g=>{
@@ -715,8 +722,8 @@ function construirCanales(){
       <div class="ch-name">${g.nombre}</div>
       <div class="ch-vals">
         ${g.canales.map(id=>{const c=ch(id);return `
-          <div class="v" style="--c:${c.color}">
-            <span id="v-${id}">--</span><i>${c.unidad}</i>
+          <div class="v${c.binario?' bin':''}" style="--c:${c.color}">
+            <span id="v-${id}">--</span>${c.unidad?`<i>${c.unidad}</i>`:''}
             <small class="ch-range" id="rg-${id}"></small>
           </div>`;}).join('')}
       </div>
@@ -732,7 +739,10 @@ function construirCanales(){
 function refrescarRangos(){
   CH.forEach(c=>{
     const el=$('#rg-'+c.id);
-    if(el)el.textContent=`${c.min}–${c.max}`;
+    if(!el)return;
+    el.textContent = c.binario
+      ? (c.alertarSinLuz ? 'alerta si se apaga' : 'sin alerta')
+      : `${c.min}–${c.max}`;
   });
 }
 
@@ -741,7 +751,13 @@ function pintarPie(g){
   const el=$('#ft-'+g.id); if(!el)return;
   el.innerHTML=g.canales.map(id=>{
     const c=ch(id), vs=serieSesion(id).map(p=>p.v);
-    if(!vs.length)return `<span>${c.unidad} — sin datos</span>`;
+    if(!vs.length)return `<span>sin datos</span>`;
+    if(c.binario){
+      const con=vs.filter(hayLuz).length;
+      const cambios=vs.reduce((a,v,i)=>a+(i&&hayLuz(v)!==hayLuz(vs[i-1])?1:0),0);
+      return `<span style="color:${c.color}">con luz ${((con/vs.length)*100).toFixed(0)}%`
+           + ` · ${cambios} cambio${cambios===1?'':'s'}</span>`;
+    }
     const prom=vs.reduce((a,b)=>a+b,0)/vs.length;
     return `<span style="color:${c.color}">${Math.min.apply(null,vs).toFixed(c.dec)}`
          + ` · ${prom.toFixed(c.dec)} · ${Math.max.apply(null,vs).toFixed(c.dec)} ${c.unidad}</span>`;
@@ -781,6 +797,26 @@ function dibujar(g){
   if(!series.some(o=>o.s.length>=2)){
     x.fillStyle='#B4C2C4';x.font='11px IBM Plex Mono, monospace';
     x.fillText('esperando lecturas…',2,h/2+4);
+    return;
+  }
+
+  /* Un canal binario se dibuja como franjas de encendido y apagado */
+  const bin=series.find(o=>o.c.binario);
+  if(bin&&series.length===1){
+    const s=bin.s;
+    if(s.length<2)return;
+    const dx=w/(VENTANA-1), off=w-(s.length-1)*dx;
+    s.forEach((p,i)=>{
+      const x0=off+i*dx, ancho=Math.ceil(dx)+1;
+      x.fillStyle = hayLuz(p.v) ? bin.c.color+'55' : '#DC3B5233';
+      x.fillRect(x0,6,ancho,h-14);
+    });
+    x.strokeStyle='#E5EBEC';x.lineWidth=1;
+    x.strokeRect(0.5,6.5,w-1,h-15);
+    const ult=s[s.length-1];
+    x.fillStyle = hayLuz(ult.v) ? '#8A7414' : '#9B2333';
+    x.font='11px IBM Plex Mono, monospace';
+    x.fillText(hayLuz(ult.v)?'encendida':'apagada',6,h-2);
     return;
   }
 
@@ -832,20 +868,32 @@ function registrar(id,valor,ts){
   const c=ch(id), g=grupoDe(id);
   S.datos[id].push({t:ts,v:valor});
   if(S.datos[id].length>5400)S.datos[id].shift();
-  $('#v-'+id).textContent=valor.toFixed(c.dec);
+  $('#v-'+id).textContent = c.binario
+    ? (hayLuz(valor)?'Con luz':'Sin luz')
+    : valor.toFixed(c.dec);
   pintarPie(g);
 
-  const malo=valor<c.min||valor>c.max;
+  const malo = c.binario
+    ? (c.alertarSinLuz && !hayLuz(valor))
+    : (valor<c.min||valor>c.max);
   S.streak[id]=malo?S.streak[id]+1:0;
 
   if(malo&&S.streak[id]>=DEBOUNCE&&!S.alarma[id]){
     S.alarma[id]=true;
-    const dir=valor>c.max?'alta':'baja';
-    log('alarma',`${c.nombre} ${dir}: ${valor.toFixed(c.dec)} ${c.unidad} (límite ${valor>c.max?c.max:c.min})`);
-    beep(dir==='baja');banner();
+    if(c.binario){
+      log('alarma','La sala se quedó sin iluminación.');
+      beep(true);
+    }else{
+      const dir=valor>c.max?'alta':'baja';
+      log('alarma',`${c.nombre} ${dir}: ${valor.toFixed(c.dec)} ${c.unidad} (límite ${valor>c.max?c.max:c.min})`);
+      beep(dir==='baja');
+    }
+    banner();
   }else if(!malo&&S.alarma[id]){
     S.alarma[id]=false;
-    log('normal',`${c.nombre} normalizada: ${valor.toFixed(c.dec)} ${c.unidad}`);
+    log('normal', c.binario
+      ? 'Iluminación restablecida.'
+      : `${c.nombre} normalizada: ${valor.toFixed(c.dec)} ${c.unidad}`);
     banner();
   }
   /* La tarjeta se marca si cualquiera de sus canales está en alarma */
@@ -860,7 +908,8 @@ function banner(){
   const b=$('#banner');
   if(act.length){
     b.classList.add('on');
-    $('#bannerTxt').textContent='Alerta activa — '+act.map(c=>c.nombre.toLowerCase()+' fuera de rango').join(' · ');
+    $('#bannerTxt').textContent='Alerta activa — '+act.map(c=>
+      c.binario ? 'sala sin iluminación' : c.nombre.toLowerCase()+' fuera de rango').join(' · ');
   }else{b.classList.remove('on');$('#bannerTxt').textContent='';}
 }
 
@@ -1097,6 +1146,19 @@ function estadisticas(id){
   const serie=serieSesion(id);
   if(!serie.length)return null;
   const vs=serie.map(p=>p.v);
+
+  if(c.binario){
+    const con=vs.filter(hayLuz).length;
+    let cambios=0,apagones=0;
+    for(let i=1;i<vs.length;i++){
+      if(hayLuz(vs[i])!==hayLuz(vs[i-1])){cambios++;if(!hayLuz(vs[i]))apagones++;}
+    }
+    return{binario:true,n:vs.length,con:con,pctLuz:(con/vs.length)*100,
+           cambios:cambios,apagones:apagones,
+           pct:((vs.length-con)/vs.length)*100,
+           dec:0,unidad:'',nombre:c.nombre};
+  }
+
   const fuera=vs.filter(v=>v<c.min||v>c.max).length;
   return{min:Math.min.apply(null,vs),max:Math.max.apply(null,vs),
     prom:vs.reduce((a,b)=>a+b,0)/vs.length,n:vs.length,
@@ -1108,6 +1170,9 @@ function resumen(){
   const cards=CH.map(c=>{
     const e=estadisticas(c.id);
     if(!e)return `<div class="s"><small>${c.nombre}</small><b>--</b></div>`;
+    if(e.binario)return `<div class="s"><small>${c.nombre}</small>
+      <b style="color:${c.color}">${e.pctLuz.toFixed(0)}<span style="font-size:12px;color:var(--ink-3)"> % con luz</span></b>
+      <span class="d">${e.apagones} apagón${e.apagones===1?'':'es'} · ${e.cambios} cambios</span></div>`;
     return `<div class="s"><small>${c.nombre}</small>
       <b style="color:${c.color}">${e.prom.toFixed(e.dec)}<span style="font-size:12px;color:var(--ink-3)"> ${c.unidad}</span></b>
       <span class="d">${e.min.toFixed(e.dec)} – ${e.max.toFixed(e.dec)} · fuera ${e.pct.toFixed(1)}%</span></div>`;
@@ -1261,17 +1326,46 @@ $('#stepList').addEventListener('click',e=>{
 
 /* ============ umbrales ============ */
 function pintarUmbrales(){
-  $('#thrList').innerHTML=CH.map(c=>`
+  $('#thrList').innerHTML=CH.map(c=>{
+    if(c.binario)return `
+      <div class="thr bin" style="--c:${c.color}">
+        <div class="nm"><i class="dot"></i>${c.nombre}</div>
+        <label class="chk"><input type="checkbox" id="chkLuz" ${c.alertarSinLuz?'checked':''}> alertar si se apaga</label>
+      </div>`;
+    return `
     <div class="thr" style="--c:${c.color}">
       <div class="nm"><i class="dot"></i>${c.nombre}</div>
       <input type="number" step="0.5" value="${c.min}" data-id="${c.id}" data-k="min" aria-label="Mínimo de ${c.nombre}">
       <input type="number" step="0.5" value="${c.max}" data-id="${c.id}" data-k="max" aria-label="Máximo de ${c.nombre}">
-    </div>`).join('');
+    </div>`;}).join('');
+
+  const chk=$('#chkLuz');
+  if(chk)chk.addEventListener('change',()=>{
+    ch('lux').alertarSinLuz=chk.checked;
+    refrescarRangos();guardar();
+  });
 }
+/*
+ * Los campos numéricos cambian de valor con la rueda del mouse.
+ * En umbrales de alerta eso es peligroso: se desconfigura una alarma
+ * al hacer scroll sin tocar nada. Se bloquea la rueda sobre ellos.
+ */
+$('#thrList').addEventListener('wheel',e=>{
+  if(e.target.tagName==='INPUT'){e.target.blur();}
+},{passive:true});
+
 $('#thrList').addEventListener('input',e=>{
   const i=e.target;if(i.tagName!=='INPUT')return;
   const c=ch(i.dataset.id);c[i.dataset.k]=parseFloat(i.value);
   refrescarRangos();dibujar(grupoDe(c.id));guardar();
+});
+
+$('#btnThrReset').addEventListener('click',()=>{
+  const ref={temp:[18,24],hum:[30,60],lux:[300,500],ruido:[0,45]};
+  CH.forEach(c=>{c.min=ref[c.id][0];c.max=ref[c.id][1];});
+  ch('lux').alertarSinLuz=true;
+  pintarUmbrales();refrescarRangos();GRUPOS.forEach(dibujar);guardar();
+  log('nota','Umbrales restaurados a los valores de referencia.');
 });
 
 /* ============ fuente ============ */
@@ -1282,6 +1376,24 @@ function graficaCompleta(c){
   const w=cv.width,h=cv.height,pd={l:72,r:22,t:36,b:40};
   x.fillStyle='#FFFFFF';x.fillRect(0,0,w,h);
   const serie=serieSesion(c.id);
+
+  if(c.binario&&serie.length>=2){
+    const a=serie[0].t, b=serie[serie.length-1].t;
+    const XX=t=>pd.l+((t-a)/Math.max(1,b-a))*(w-pd.l-pd.r);
+    for(let i=0;i<serie.length-1;i++){
+      x.fillStyle = hayLuz(serie[i].v) ? '#E8C25A' : '#E9A3AE';
+      x.fillRect(XX(serie[i].t),pd.t,Math.max(1,XX(serie[i+1].t)-XX(serie[i].t)),h-pd.t-pd.b);
+    }
+    x.strokeStyle='#CCD6D7';x.strokeRect(pd.l,pd.t,w-pd.l-pd.r,h-pd.t-pd.b);
+    x.fillStyle='#16292C';x.font='600 20px sans-serif';
+    x.fillText('Iluminación (encendida / apagada)',pd.l,24);
+    x.fillStyle='#8A9A9C';x.font='15px sans-serif';
+    x.fillText(hora(new Date(a)),pd.l,h-12);
+    const f=hora(new Date(b));
+    x.fillText(f,w-pd.r-x.measureText(f).width,h-12);
+    return cv.toDataURL('image/png');
+  }
+
   if(serie.length<2){
     x.fillStyle='#999';x.font='22px sans-serif';
     x.fillText('Sin datos suficientes',pd.l,h/2);
@@ -1401,7 +1513,9 @@ function generarPDF(){
   tabla(['Variable','Mín','Prom','Máx','Rango admitido','Tiempo fuera'],
     CH.map(c=>{
       const e=estadisticas(c.id);
-      if(!e)return[c.nombre,'—','—','—',`${c.min} – ${c.max} ${c.unidad}`,'—'];
+      if(!e)return[c.nombre,'—','—','—',c.binario?'encendida':`${c.min} – ${c.max} ${c.unidad}`,'—'];
+      if(e.binario)return[c.nombre,'—',e.pctLuz.toFixed(1)+'% con luz','—',
+                          'encendida',e.pct.toFixed(1)+'%'];
       return[c.nombre,e.min.toFixed(e.dec),e.prom.toFixed(e.dec),e.max.toFixed(e.dec),
              `${c.min} – ${c.max} ${c.unidad}`,e.pct.toFixed(1)+'%'];
     }),
@@ -1509,6 +1623,23 @@ async function cargarHistorial(){
 function resumenSerie(id){
   const c=ch(id), s=HIST[id];
   if(!s.length)return null;
+
+  if(c.binario){
+    const n=s.length;
+    const con=s.filter(p=>hayLuz(p.v)).length;
+    let cambios=0, apagones=0;
+    for(let i=1;i<n;i++){
+      if(hayLuz(s[i].v)!==hayLuz(s[i-1].v)){
+        cambios++;
+        if(!hayLuz(s[i].v))apagones++;
+      }
+    }
+    const dur=(s[n-1].t-s[0].t)/60000;
+    return{binario:true,n:n,con:con,pctLuz:(con/n)*100,
+           cambios:cambios,apagones:apagones,
+           pct:((n-con)/n)*100,dur:dur};
+  }
+
   const vs=s.map(p=>p.v).slice().sort((a,b)=>a-b);
   const n=vs.length;
   const media=vs.reduce((a,b)=>a+b,0)/n;
@@ -1583,6 +1714,25 @@ function dibujarAnalisis(cv,g){
   if(!canales.length){
     x.fillStyle='#93A5A8';x.font='12px IBM Plex Sans, sans-serif';
     x.fillText('Sin datos en esta ventana',pd.l,h/2);
+    return;
+  }
+
+  /* Canal binario: franjas de encendido y apagado en el tiempo */
+  const cb=canales.map(ch).find(c=>c.binario);
+  if(cb&&canales.length===1){
+    const serie=HIST[cb.id];
+    const a=serie[0].t, b=serie[serie.length-1].t;
+    const XX=t=>pd.l+((t-a)/Math.max(1,b-a))*(w-pd.l-pd.r);
+    for(let i=0;i<serie.length-1;i++){
+      const x0=XX(serie[i].t), x1=XX(serie[i+1].t);
+      x.fillStyle = hayLuz(serie[i].v) ? cb.color+'66' : '#DC3B5240';
+      x.fillRect(x0,pd.t,Math.max(1,x1-x0),h-pd.t-pd.b);
+    }
+    x.strokeStyle='#E5EBEC';x.strokeRect(pd.l+0.5,pd.t+0.5,w-pd.l-pd.r-1,h-pd.t-pd.b-1);
+    x.fillStyle='#93A5A8';x.font='10px IBM Plex Mono, monospace';
+    x.fillText(hora(new Date(a)),pd.l,h-6);
+    const f=hora(new Date(b));
+    x.fillText(f,w-pd.r-x.measureText(f).width,h-6);
     return;
   }
 
@@ -1740,7 +1890,17 @@ function pintarAnalisis(){
 
     g.canales.forEach(id=>{
       const c=ch(id), r=resumenSerie(id);
-      if(r){
+      if(r&&r.binario){
+        $('#an-e-'+id).innerHTML=`
+          <div style="grid-column:1/-1"><small>${c.nombre}</small></div>
+          <div><small>Con luz</small><b style="color:var(--accent)">${r.pctLuz.toFixed(1)}%</b></div>
+          <div><small>Sin luz</small><b style="color:${r.pct>0?'var(--alarm)':'var(--ink)'}">${r.pct.toFixed(1)}%</b></div>
+          <div><small>Lecturas</small><b>${r.n}</b></div>
+          <div><small>Cambios</small><b>${r.cambios}</b></div>
+          <div><small>Apagones</small><b style="color:${r.apagones?'var(--alarm)':'var(--ink)'}">${r.apagones}</b></div>
+          <div><small>Ventana</small><b>${r.dur.toFixed(0)} min</b></div>`;
+        const hc=$('#an-h-'+id); if(hc)hc.style.display='none';
+      }else if(r){
         $('#an-e-'+id).innerHTML=`
           <div style="grid-column:1/-1"><small>${c.nombre}</small></div>
           <div><small>Media</small><b>${r.media.toFixed(c.dec)}</b></div>
@@ -1755,7 +1915,7 @@ function pintarAnalisis(){
       }else{
         $('#an-e-'+id).innerHTML=`<div style="grid-column:1/-1"><small>${c.nombre}: sin registros</small></div>`;
       }
-      dibujarHistograma($('#an-h-'+id),id);
+      if(!ch(id).binario)dibujarHistograma($('#an-h-'+id),id);
     });
   });
 
@@ -1765,6 +1925,12 @@ function pintarAnalisis(){
     <tbody>${CH.map(c=>{
       const r=resumenSerie(c.id);
       if(!r)return `<tr><td>${c.nombre}</td><td colspan="10">sin datos</td></tr>`;
+      if(r.binario)return `<tr>
+        <td>${c.nombre}</td><td>${r.n}</td>
+        <td colspan="6">con luz ${r.pctLuz.toFixed(1)}% · ${r.cambios} cambios · ${r.apagones} apagones</td>
+        <td>alerta si se apaga</td>
+        <td class="${r.pct>0?'mal':'bien'}">${r.pct.toFixed(1)}%</td>
+        <td>—</td></tr>`;
       return `<tr>
         <td>${c.nombre}</td><td>${r.n}</td>
         <td>${r.media.toFixed(c.dec)}</td><td>${r.mediana.toFixed(c.dec)}</td>
